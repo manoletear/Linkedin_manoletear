@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manoletear - Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a href="#" class="logo">Manoletear</a>
+            <ul class="nav-links">
+                <li><a href="#about">Sobre mí</a></li>
+                <li><a href="#experience">Experiencia</a></li>
+                <li><a href="#skills">Habilidades</a></li>
+                <li><a href="#testimonials">Testimonios</a></li>
+                <li><a href="#contact">Contacto</a></li>
+            </ul>
+            <button class="nav-toggle" aria-label="Toggle menu">&#9776;</button>
+        </div>
+    </nav>
+
+    <header class="hero" id="hero">
+        <div class="container hero-content">
+            <div class="hero-text">
+                <p class="hero-greeting">Hola, soy</p>
+                <h1 class="hero-name">Manoletear</h1>
+                <p class="hero-title">Profesional &amp; Desarrollador</p>
+                <p class="hero-description">Apasionado por la tecnología y la innovación. Construyendo soluciones que marcan la diferencia.</p>
+                <div class="hero-actions">
+                    <a href="#contact" class="btn btn-primary">Contáctame</a>
+                    <a href="#experience" class="btn btn-secondary">Ver experiencia</a>
+                </div>
+            </div>
+            <div class="hero-avatar">
+                <div class="avatar-placeholder">M</div>
+            </div>
+        </div>
+    </header>
+
+    <section class="section" id="about">
+        <div class="container">
+            <h2 class="section-title">Sobre mí</h2>
+            <div class="about-content">
+                <p>Soy un profesional con experiencia en desarrollo y gestión de proyectos. Me apasiona crear soluciones innovadoras y trabajar en equipo para alcanzar objetivos ambiciosos.</p>
+                <p>Mi enfoque se centra en la calidad, la eficiencia y la mejora continua. Siempre busco aprender nuevas tecnologías y metodologías para mantenerme actualizado en un mundo en constante evolución.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-alt" id="experience">
+        <div class="container">
+            <h2 class="section-title">Experiencia</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h3>Desarrollador Senior</h3>
+                        <p class="timeline-company">Empresa Tecnológica</p>
+                        <p class="timeline-date">2022 - Presente</p>
+                        <p>Liderando el desarrollo de aplicaciones web y móviles con tecnologías modernas.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h3>Desarrollador Full Stack</h3>
+                        <p class="timeline-company">Startup Innovadora</p>
+                        <p class="timeline-date">2019 - 2022</p>
+                        <p>Diseño e implementación de soluciones end-to-end para clientes diversos.</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h3>Desarrollador Junior</h3>
+                        <p class="timeline-company">Agencia Digital</p>
+                        <p class="timeline-date">2017 - 2019</p>
+                        <p>Desarrollo de sitios web y aplicaciones para pequeñas y medianas empresas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="skills">
+        <div class="container">
+            <h2 class="section-title">Habilidades</h2>
+            <div class="skills-grid">
+                <div class="skill-card">
+                    <div class="skill-icon">&#60;/&#62;</div>
+                    <h3>Frontend</h3>
+                    <p>HTML, CSS, JavaScript, React</p>
+                </div>
+                <div class="skill-card">
+                    <div class="skill-icon">&#9881;</div>
+                    <h3>Backend</h3>
+                    <p>Node.js, Python, APIs REST</p>
+                </div>
+                <div class="skill-card">
+                    <div class="skill-icon">&#128202;</div>
+                    <h3>Bases de datos</h3>
+                    <p>SQL, MongoDB, PostgreSQL</p>
+                </div>
+                <div class="skill-card">
+                    <div class="skill-icon">&#9729;</div>
+                    <h3>Cloud & DevOps</h3>
+                    <p>AWS, Docker, CI/CD</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section section-alt" id="testimonials">
+        <div class="container">
+            <h2 class="section-title">Testimonios</h2>
+            <p class="section-subtitle">Lo que dicen quienes han trabajado conmigo</p>
+            <div class="testimonials-carousel">
+                <button class="carousel-btn carousel-btn-prev" aria-label="Anterior">&larr;</button>
+                <div class="testimonials-track">
+                    <div class="testimonial-card active">
+                        <div class="testimonial-quote">&ldquo;</div>
+                        <p class="testimonial-text">Un profesional excepcional. Su capacidad para resolver problemas complejos y entregar resultados de alta calidad es impresionante. Siempre va más allá de lo esperado.</p>
+                        <div class="testimonial-author">
+                            <div class="testimonial-avatar">AC</div>
+                            <div>
+                                <p class="testimonial-name">Ana Castillo</p>
+                                <p class="testimonial-role">Directora de Tecnología, TechCorp</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-quote">&ldquo;</div>
+                        <p class="testimonial-text">Trabajar con Manoletear fue una experiencia fantástica. Su dedicación y conocimiento técnico hicieron que nuestro proyecto fuera un éxito rotundo. Lo recomiendo sin dudarlo.</p>
+                        <div class="testimonial-author">
+                            <div class="testimonial-avatar">RM</div>
+                            <div>
+                                <p class="testimonial-name">Roberto Martínez</p>
+                                <p class="testimonial-role">CEO, StartupX</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-quote">&ldquo;</div>
+                        <p class="testimonial-text">Su atención al detalle y compromiso con la excelencia son incomparables. Entregó el proyecto antes del plazo establecido y superó todas nuestras expectativas.</p>
+                        <div class="testimonial-author">
+                            <div class="testimonial-avatar">LP</div>
+                            <div>
+                                <p class="testimonial-name">Laura Pérez</p>
+                                <p class="testimonial-role">Product Manager, InnovateCo</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="testimonial-card">
+                        <div class="testimonial-quote">&ldquo;</div>
+                        <p class="testimonial-text">Un líder natural con habilidades técnicas sobresalientes. Su capacidad para comunicar ideas complejas de forma clara facilitó enormemente nuestra colaboración.</p>
+                        <div class="testimonial-author">
+                            <div class="testimonial-avatar">DG</div>
+                            <div>
+                                <p class="testimonial-name">Diego García</p>
+                                <p class="testimonial-role">Director de Ingeniería, DataFlow</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="carousel-btn carousel-btn-next" aria-label="Siguiente">&rarr;</button>
+            </div>
+            <div class="carousel-dots"></div>
+        </div>
+    </section>
+
+    <section class="section" id="contact">
+        <div class="container">
+            <h2 class="section-title">Contacto</h2>
+            <div class="contact-content">
+                <p>¿Interesado en trabajar juntos? No dudes en contactarme.</p>
+                <div class="contact-links">
+                    <a href="mailto:contacto@manoletear.com" class="contact-item">
+                        <span class="contact-icon">&#9993;</span>
+                        <span>contacto@manoletear.com</span>
+                    </a>
+                    <a href="https://linkedin.com" class="contact-item" target="_blank" rel="noopener">
+                        <span class="contact-icon">in</span>
+                        <span>LinkedIn</span>
+                    </a>
+                    <a href="https://github.com" class="contact-item" target="_blank" rel="noopener">
+                        <span class="contact-icon">&#128187;</span>
+                        <span>GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 Manoletear. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
