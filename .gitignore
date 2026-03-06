@@ -6,3 +6,5 @@ venv/
 *.egg-info/
 dist/
 build/
+config/credentials.json
+config/post_history.json

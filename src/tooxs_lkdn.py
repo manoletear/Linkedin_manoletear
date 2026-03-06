@@ -87,9 +87,13 @@ class TooxsLkdn:
         self._topic_index = (self._topic_index + 1) % len(self.topics)
         return topic
 
-    def run_once(self):
-        """Genera y publica un solo post."""
-        topic = self._next_topic()
+    def run_once(self, override_topic: str | None = None):
+        """Genera y publica un solo post.
+
+        Args:
+            override_topic: Si se proporciona, usa este tema en vez de rotar.
+        """
+        topic = override_topic or self._next_topic()
         logger.info("Tema seleccionado: %s", topic)
 
         try:

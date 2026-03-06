@@ -1,0 +1,236 @@
+"""
+Agente de investigación de noticias inmobiliarias y de IA en construcción.
+
+Busca noticias diarias, las analiza con Claude, las puntúa por relevancia
+y las registra en Google Sheets.
+"""
+
+import hashlib
+import json
+import logging
+import os
+from datetime import datetime
+
+import anthropic
+import requests
+
+logger = logging.getLogger("TooxsLkdn.NewsResearcher")
+
+SEARCH_QUERIES = [
+    "inteligencia artificial sector inmobiliario noticias",
+    "IA construcción tecnología innovación",
+    "proptech inteligencia artificial real estate",
+    "AI real estate construction technology news",
+    "automatización inteligencia artificial bienes raíces",
+    "machine learning construcción edificación",
+]
+
+ANALYSIS_PROMPT = """Eres un analista experto en el sector inmobiliario y en la aplicación de
+inteligencia artificial en construcción y bienes raíces.
+
+Analiza las siguientes noticias extraídas de búsquedas web y devuelve un JSON array con las
+noticias más relevantes (máximo 10). Para cada noticia incluye:
+
+- "title": Título de la noticia
+- "category": Categoría (una de: "Inmobiliario", "IA en Construcción", "PropTech", "IA Empresarial", "Innovación Inmobiliaria")
+- "summary": Resumen de 2-3 oraciones en español
+- "url": URL de la noticia (la original, no inventada)
+- "score": Puntuación de 1-10 según el interés que generaría en el sector inmobiliario y los avances de IA a nivel empresarial. Criterios:
+  - 8-10: Noticia disruptiva, nuevo producto/regulación, gran impacto en el sector
+  - 5-7: Noticia relevante, tendencia interesante, aplicación práctica de IA
+  - 1-4: Noticia menor, poca relevancia directa al sector
+
+IMPORTANTE:
+- Solo incluye noticias reales con URLs reales que aparezcan en los resultados.
+- Filtra duplicados y noticias irrelevantes.
+- Prioriza noticias recientes (últimos 7 días).
+- Devuelve SOLO el JSON array, sin texto adicional ni markdown.
+
+Resultados de búsqueda:
+{search_results}"""
+
+TOPIC_PROMPT = """Basándote en estas noticias del sector inmobiliario y de IA en construcción,
+genera un tema concreto y atractivo para un post de LinkedIn dirigido a profesionales del sector.
+
+El tema debe:
+- Ser específico y basado en una noticia real
+- Generar engagement y debate
+- Conectar IA con el sector inmobiliario/construcción
+
+Noticias (ordenadas por relevancia):
+{news_summary}
+
+Devuelve SOLO el tema como una frase, sin explicaciones."""
+
+
+class NewsResearcher:
+    """Busca y analiza noticias del sector inmobiliario y IA en construcción."""
+
+    SERPER_URL = "https://google.serper.dev/search"
+    NEWSAPI_URL = "https://newsapi.org/v2/everything"
+
+    def __init__(
+        self,
+        anthropic_key: str,
+        serper_key: str | None = None,
+        newsapi_key: str | None = None,
+    ):
+        self.claude = anthropic.Anthropic(api_key=anthropic_key)
+        self.serper_key = serper_key
+        self.newsapi_key = newsapi_key
+
+    def search_serper(self, query: str, num_results: int = 10) -> list[dict]:
+        """Busca noticias con Serper (Google Search API)."""
+        if not self.serper_key:
+            return []
+        try:
+            response = requests.post(
+                self.SERPER_URL,
+                json={"q": query, "num": num_results, "gl": "es", "hl": "es"},
+                headers={"X-API-KEY": self.serper_key, "Content-Type": "application/json"},
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            results = []
+            for item in data.get("organic", []):
+                results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("link", ""),
+                    "snippet": item.get("snippet", ""),
+                    "source": "serper",
+                })
+            for item in data.get("news", []):
+                results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("link", ""),
+                    "snippet": item.get("snippet", ""),
+                    "date": item.get("date", ""),
+                    "source": "serper_news",
+                })
+            return results
+        except Exception:
+            logger.exception("Error buscando en Serper: %s", query)
+            return []
+
+    def search_newsapi(self, query: str, num_results: int = 10) -> list[dict]:
+        """Busca noticias con NewsAPI."""
+        if not self.newsapi_key:
+            return []
+        try:
+            response = requests.get(
+                self.NEWSAPI_URL,
+                params={
+                    "q": query,
+                    "language": "es",
+                    "sortBy": "publishedAt",
+                    "pageSize": num_results,
+                    "apiKey": self.newsapi_key,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            results = []
+            for item in data.get("articles", []):
+                results.append({
+                    "title": item.get("title", ""),
+                    "url": item.get("url", ""),
+                    "snippet": item.get("description", ""),
+                    "date": item.get("publishedAt", ""),
+                    "source": "newsapi",
+                })
+            return results
+        except Exception:
+            logger.exception("Error buscando en NewsAPI: %s", query)
+            return []
+
+    def search_all(self) -> list[dict]:
+        """Ejecuta todas las búsquedas y consolida resultados."""
+        all_results = []
+        seen_urls = set()
+
+        for query in SEARCH_QUERIES:
+            for result in self.search_serper(query) + self.search_newsapi(query):
+                url = result.get("url", "")
+                if url and url not in seen_urls:
+                    seen_urls.add(url)
+                    all_results.append(result)
+
+        logger.info("Total de resultados de búsqueda: %d", len(all_results))
+        return all_results
+
+    def analyze_news(self, raw_results: list[dict]) -> list[dict]:
+        """Analiza los resultados con Claude y devuelve noticias procesadas."""
+        if not raw_results:
+            logger.warning("No hay resultados para analizar.")
+            return []
+
+        search_text = ""
+        for r in raw_results[:50]:  # Limitar para no exceder contexto
+            search_text += f"- [{r.get('title', 'Sin título')}]({r.get('url', '')})\n"
+            search_text += f"  {r.get('snippet', '')}\n"
+            if r.get("date"):
+                search_text += f"  Fecha: {r['date']}\n"
+            search_text += "\n"
+
+        response = self.claude.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
+            messages=[{
+                "role": "user",
+                "content": ANALYSIS_PROMPT.format(search_results=search_text),
+            }],
+        )
+
+        try:
+            news_list = json.loads(response.content[0].text)
+            logger.info("Noticias analizadas: %d", len(news_list))
+            return news_list
+        except (json.JSONDecodeError, IndexError):
+            logger.exception("Error parseando respuesta de Claude")
+            return []
+
+    def generate_topic_from_news(self, news: list[dict]) -> str:
+        """Genera un tema para TooxsLkdn basado en las noticias del día."""
+        if not news:
+            return ""
+
+        news_summary = "\n".join(
+            f"- [{n['title']}] (Score: {n['score']}) {n['summary']}"
+            for n in sorted(news, key=lambda x: x.get("score", 0), reverse=True)[:5]
+        )
+
+        response = self.claude.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=256,
+            messages=[{
+                "role": "user",
+                "content": TOPIC_PROMPT.format(news_summary=news_summary),
+            }],
+        )
+
+        return response.content[0].text.strip()
+
+    @staticmethod
+    def generate_news_id(title: str, url: str) -> str:
+        """Genera un ID único para una noticia."""
+        raw = f"{title}:{url}"
+        return hashlib.sha256(raw.encode()).hexdigest()[:12]
+
+    def format_for_sheets(self, news: list[dict]) -> list[list]:
+        """Convierte noticias analizadas al formato de filas para Google Sheets."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        rows = []
+        for n in news:
+            news_id = self.generate_news_id(n.get("title", ""), n.get("url", ""))
+            rows.append([
+                news_id,
+                n.get("category", "Sin categoría"),
+                today,
+                n.get("title", ""),
+                n.get("summary", ""),
+                n.get("url", ""),
+                n.get("score", 0),
+            ])
+        return rows

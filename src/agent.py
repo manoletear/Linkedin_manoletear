@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from src.linkedin_client import LinkedInClient
 from src.post_generator import PostGenerator
 from src.tooxs_lkdn import TooxsLkdn
+from src.orchestrator import Orchestrator
 
 
 def get_env_or_exit(key: str) -> str:
@@ -20,9 +21,21 @@ def get_env_or_exit(key: str) -> str:
 
 
 def cmd_start(args):
-    """Inicia el agente autónomo."""
+    """Inicia el agente autónomo (solo publicación, sin noticias)."""
     agent = TooxsLkdn()
     agent.start(cron_time=args.time)
+
+
+def cmd_full(args):
+    """Inicia el orquestador completo: noticias + sheets + publicación."""
+    orch = Orchestrator()
+    orch.start(research_time=args.time)
+
+
+def cmd_research_now(args):
+    """Ejecuta el ciclo completo de investigación + publicación ahora."""
+    orch = Orchestrator()
+    orch.run_daily_cycle()
 
 
 def cmd_post_now(args):
@@ -134,12 +147,23 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles")
 
-    # start: inicia el agente autónomo
-    start_p = subparsers.add_parser("start", help="Inicia el agente autónomo")
+    # full: inicia orquestador completo (noticias + sheets + publicación)
+    full_p = subparsers.add_parser("full", help="Inicia el ciclo completo: noticias → sheets → LinkedIn")
+    full_p.add_argument(
+        "--time", default="08:00", help="Hora del ciclo diario HH:MM (default: 08:00)"
+    )
+    full_p.set_defaults(func=cmd_full)
+
+    # start: inicia solo el publicador
+    start_p = subparsers.add_parser("start", help="Inicia solo el publicador (sin noticias)")
     start_p.add_argument(
         "--time", default="09:00", help="Hora de publicación diaria HH:MM (default: 09:00)"
     )
     start_p.set_defaults(func=cmd_start)
+
+    # research-now: ejecuta ciclo completo ahora
+    rnow_p = subparsers.add_parser("research-now", help="Busca noticias + publica ahora")
+    rnow_p.set_defaults(func=cmd_research_now)
 
     # post-now: publica inmediatamente
     now_p = subparsers.add_parser("post-now", help="Genera y publica un post ahora")
