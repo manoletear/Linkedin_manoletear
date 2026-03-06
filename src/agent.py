@@ -1,23 +1,34 @@
-"""Agente principal de automatización de LinkedIn."""
+"""Entry point para TooxsLkdn - Agente de automatización de LinkedIn."""
 
 import argparse
+import os
 import sys
 
 from dotenv import load_dotenv
-import os
 
 from src.linkedin_client import LinkedInClient
 from src.post_generator import PostGenerator
+from src.tooxs_lkdn import TooxsLkdn
 
 
 def get_env_or_exit(key: str) -> str:
-    """Obtiene una variable de entorno o termina con error."""
     value = os.getenv(key)
     if not value:
         print(f"Error: Variable de entorno '{key}' no configurada.")
-        print("Copia .env.example a .env y configura tus credenciales.")
         sys.exit(1)
     return value
+
+
+def cmd_start(args):
+    """Inicia el agente autónomo."""
+    agent = TooxsLkdn()
+    agent.start(cron_time=args.time)
+
+
+def cmd_post_now(args):
+    """Ejecuta un post inmediatamente."""
+    agent = TooxsLkdn()
+    agent.run_once()
 
 
 def cmd_generate(args):
@@ -46,12 +57,10 @@ def cmd_publish(args):
     generator = PostGenerator(api_key=api_key)
     linkedin = LinkedInClient(access_token=token)
 
-    # Validar token
     if not linkedin.validate_token():
         print("Error: Token de LinkedIn inválido o expirado.")
         sys.exit(1)
 
-    # Generar post
     if args.text:
         post_text = args.text
     else:
@@ -103,39 +112,65 @@ def cmd_validate(args):
         sys.exit(1)
 
 
+def cmd_history(args):
+    """Muestra el historial de posts publicados."""
+    agent = TooxsLkdn()
+    if not agent.history:
+        print("No hay posts en el historial.")
+        return
+
+    limit = args.limit or len(agent.history)
+    for entry in agent.history[-limit:]:
+        print(f"\n[{entry['timestamp']}] ({entry['status']})")
+        print(f"Tema: {entry['topic']}")
+        print(f"Post: {entry['post'][:150]}...")
+        print("-" * 50)
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Agente de automatización de posts para LinkedIn"
+        prog="TooxsLkdn",
+        description="TooxsLkdn - Agente autónomo de posts para LinkedIn",
     )
     subparsers = parser.add_subparsers(dest="command", help="Comandos disponibles")
 
-    # Comando: generate
-    gen_parser = subparsers.add_parser("generate", help="Genera un post sin publicar")
-    gen_parser.add_argument("topic", help="Tema del post")
-    gen_parser.set_defaults(func=cmd_generate)
-
-    # Comando: publish
-    pub_parser = subparsers.add_parser("publish", help="Genera y publica un post")
-    pub_parser.add_argument("--topic", help="Tema para generar el post")
-    pub_parser.add_argument("--text", help="Texto directo a publicar")
-    pub_parser.add_argument(
-        "-y", "--yes", action="store_true", help="Publicar sin confirmación"
+    # start: inicia el agente autónomo
+    start_p = subparsers.add_parser("start", help="Inicia el agente autónomo")
+    start_p.add_argument(
+        "--time", default="09:00", help="Hora de publicación diaria HH:MM (default: 09:00)"
     )
-    pub_parser.set_defaults(func=cmd_publish)
+    start_p.set_defaults(func=cmd_start)
 
-    # Comando: improve
-    imp_parser = subparsers.add_parser("improve", help="Mejora un borrador de post")
-    imp_parser.add_argument("draft", help="Borrador del post")
-    imp_parser.add_argument(
-        "--instructions", "-i", help="Instrucciones para la mejora"
-    )
-    imp_parser.set_defaults(func=cmd_improve)
+    # post-now: publica inmediatamente
+    now_p = subparsers.add_parser("post-now", help="Genera y publica un post ahora")
+    now_p.set_defaults(func=cmd_post_now)
 
-    # Comando: validate
-    val_parser = subparsers.add_parser(
-        "validate", help="Valida la conexión con LinkedIn"
-    )
-    val_parser.set_defaults(func=cmd_validate)
+    # generate
+    gen_p = subparsers.add_parser("generate", help="Genera un post sin publicar")
+    gen_p.add_argument("topic", help="Tema del post")
+    gen_p.set_defaults(func=cmd_generate)
+
+    # publish
+    pub_p = subparsers.add_parser("publish", help="Genera y publica un post")
+    pub_p.add_argument("--topic", help="Tema para generar el post")
+    pub_p.add_argument("--text", help="Texto directo a publicar")
+    pub_p.add_argument("-y", "--yes", action="store_true", help="Sin confirmación")
+    pub_p.set_defaults(func=cmd_publish)
+
+    # improve
+    imp_p = subparsers.add_parser("improve", help="Mejora un borrador de post")
+    imp_p.add_argument("draft", help="Borrador del post")
+    imp_p.add_argument("--instructions", "-i", help="Instrucciones para la mejora")
+    imp_p.set_defaults(func=cmd_improve)
+
+    # validate
+    val_p = subparsers.add_parser("validate", help="Valida conexión con LinkedIn")
+    val_p.set_defaults(func=cmd_validate)
+
+    # history
+    hist_p = subparsers.add_parser("history", help="Muestra historial de posts")
+    hist_p.add_argument("--limit", "-n", type=int, help="Últimos N posts")
+    hist_p.set_defaults(func=cmd_history)
 
     args = parser.parse_args()
     if not args.command:
