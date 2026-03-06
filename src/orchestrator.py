@@ -65,11 +65,11 @@ class Orchestrator:
         for key in ("ANTHROPIC_API_KEY", "LINKEDIN_ACCESS_TOKEN", "GOOGLE_SPREADSHEET_ID"):
             if not os.getenv(key):
                 missing.append(key)
-        if not os.getenv("SERPER_API_KEY") and not os.getenv("NEWSAPI_KEY"):
-            missing.append("SERPER_API_KEY o NEWSAPI_KEY (al menos una)")
         if missing:
             logger.error("Variables faltantes: %s", ", ".join(missing))
             sys.exit(1)
+        if not os.getenv("SERPER_API_KEY") and not os.getenv("NEWSAPI_KEY"):
+            logger.info("Sin SERPER_API_KEY ni NEWSAPI_KEY. Usando solo Google News RSS.")
 
     def _get_existing_ids(self) -> set[str]:
         """Obtiene IDs de noticias ya registradas para evitar duplicados."""

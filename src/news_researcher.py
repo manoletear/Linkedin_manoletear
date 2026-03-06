@@ -9,7 +9,9 @@ import hashlib
 import json
 import logging
 import os
+import xml.etree.ElementTree as ET
 from datetime import datetime
+from urllib.parse import quote
 
 import anthropic
 import requests
@@ -23,6 +25,14 @@ SEARCH_QUERIES = [
     "AI real estate construction technology news",
     "automatización inteligencia artificial bienes raíces",
     "machine learning construcción edificación",
+]
+
+GOOGLE_NEWS_QUERIES = [
+    "inteligencia artificial inmobiliario",
+    "IA construcción tecnología",
+    "proptech real estate AI",
+    "artificial intelligence construction",
+    "automatización bienes raíces",
 ]
 
 ANALYSIS_PROMPT = """Eres un analista experto en el sector inmobiliario y en la aplicación de
@@ -68,6 +78,7 @@ class TooxsNews:
 
     SERPER_URL = "https://google.serper.dev/search"
     NEWSAPI_URL = "https://newsapi.org/v2/everything"
+    GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
 
     def __init__(
         self,
@@ -78,6 +89,37 @@ class TooxsNews:
         self.claude = anthropic.Anthropic(api_key=anthropic_key)
         self.serper_key = serper_key
         self.newsapi_key = newsapi_key
+
+    def search_google_news(self, query: str, lang: str = "es", country: str = "ES") -> list[dict]:
+        """Busca noticias en Google News via RSS (gratis, sin API key)."""
+        try:
+            encoded_query = quote(query)
+            url = f"{self.GOOGLE_NEWS_RSS}?q={encoded_query}&hl={lang}&gl={country}&ceid={country}:{lang}"
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+
+            root = ET.fromstring(response.content)
+            results = []
+            for item in root.findall(".//item"):
+                title = item.findtext("title", "")
+                link = item.findtext("link", "")
+                description = item.findtext("description", "")
+                pub_date = item.findtext("pubDate", "")
+                source_elem = item.find("source")
+                source_name = source_elem.text if source_elem is not None else "Google News"
+
+                results.append({
+                    "title": title,
+                    "url": link,
+                    "snippet": description,
+                    "date": pub_date,
+                    "source": f"google_news:{source_name}",
+                })
+            logger.info("Google News [%s]: %d resultados", query, len(results))
+            return results
+        except Exception:
+            logger.exception("Error buscando en Google News RSS: %s", query)
+            return []
 
     def search_serper(self, query: str, num_results: int = 10) -> list[dict]:
         """Busca noticias con Serper (Google Search API)."""
@@ -150,12 +192,20 @@ class TooxsNews:
         all_results = []
         seen_urls = set()
 
-        for query in SEARCH_QUERIES:
-            for result in self.search_serper(query) + self.search_newsapi(query):
+        def _add_results(results: list[dict]):
+            for result in results:
                 url = result.get("url", "")
                 if url and url not in seen_urls:
                     seen_urls.add(url)
                     all_results.append(result)
+
+        # Google News RSS (gratis, siempre disponible)
+        for query in GOOGLE_NEWS_QUERIES:
+            _add_results(self.search_google_news(query))
+
+        # Serper + NewsAPI (requieren API keys)
+        for query in SEARCH_QUERIES:
+            _add_results(self.search_serper(query) + self.search_newsapi(query))
 
         logger.info("Total de resultados de búsqueda: %d", len(all_results))
         return all_results
