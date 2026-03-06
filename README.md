@@ -1,15 +1,16 @@
 # TooxsLkdn - Agente Autónomo de LinkedIn + Investigación de Noticias
 
 Sistema de dos agentes que trabajan juntos:
-1. **TooxsNews** - Busca noticias diarias del sector inmobiliario + IA en construcción, las analiza, puntúa y registra en Google Sheets.
+1. **TooxsNews** - Busca noticias diarias del sector inmobiliario + IA en construcción, herramientas de IA para la industria y aplicaciones de Claude/Anthropic en real estate. Las analiza, puntúa y registra en Google Sheets.
 2. **TooxsLkdn** - Genera y publica posts en LinkedIn basados en las noticias más relevantes del día.
 
 ## Flujo Diario Automático
 
 ```
-08:00  TooxsNews busca noticias (Serper / NewsAPI)
+08:00  TooxsNews busca noticias (Google News RSS / Serper / NewsAPI)
    ↓   Claude analiza y puntúa cada noticia (score 1-10)
-   ↓   Registra en Google Sheets: ID, rubro, fecha, resumen, link, score
+   ↓   Categoriza: Inmobiliario, IA en Construcción, PropTech, Herramientas IA, Claude & Anthropic...
+   ↓   Registra en Google Sheets: ID, rubro, fecha, resumen, link, score, herramientas IA
    ↓   Genera un tema basado en las noticias top
 09:00  TooxsLkdn genera un post con Claude y lo publica en LinkedIn
 ```
@@ -21,12 +22,13 @@ Cada fila de la hoja `Noticias_IA_Inmobiliario` contiene:
 | Columna | Descripción |
 |---|---|
 | ID Noticia | Hash único de 12 caracteres |
-| Rubro | Inmobiliario, IA en Construcción, PropTech, etc. |
+| Rubro | Inmobiliario, IA en Construcción, PropTech, Herramientas IA, Claude & Anthropic, etc. |
 | Fecha | Fecha de registro (YYYY-MM-DD) |
 | Título | Título de la noticia |
 | Resumen | Resumen de 2-3 oraciones en español |
 | Link | URL original de la noticia |
 | Score | 1-10 según relevancia para el sector |
+| Herramientas IA | Herramientas mencionadas (ej: Claude, Python, TensorFlow) |
 
 ## Instalación
 
@@ -53,7 +55,7 @@ cp .env.example .env
 
 ### Configurar APIs de búsqueda
 
-Necesitas al menos una:
+TooxsNews usa **Google News RSS** como fuente gratuita (no necesita API key). Opcionalmente puedes añadir:
 - **Serper** (recomendado): Regístrate en [serper.dev](https://serper.dev/) y copia tu API key
 - **NewsAPI**: Regístrate en [newsapi.org](https://newsapi.org/) y copia tu API key
 
@@ -112,8 +114,8 @@ python -m src.agent history -n 5
 | `ANTHROPIC_API_KEY` | API Key de Anthropic (Claude) | Sí |
 | `GOOGLE_SPREADSHEET_ID` | ID del Google Sheet | Para `full`/`research-now` |
 | `GOOGLE_CREDENTIALS_PATH` | Ruta al JSON de credenciales | Para `full`/`research-now` |
-| `SERPER_API_KEY` | API Key de Serper | Al menos una |
-| `NEWSAPI_KEY` | API Key de NewsAPI | Al menos una |
+| `SERPER_API_KEY` | API Key de Serper | No (opcional) |
+| `NEWSAPI_KEY` | API Key de NewsAPI | No (opcional) |
 | `POST_LANGUAGE` | Idioma de los posts (default: `es`) | No |
 | `POST_TONE` | Tono (profesional, casual, inspirador) | No |
 | `DRY_RUN` | `true` = no publica en LinkedIn | No |

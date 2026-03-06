@@ -25,6 +25,15 @@ SEARCH_QUERIES = [
     "AI real estate construction technology news",
     "automatización inteligencia artificial bienes raíces",
     "machine learning construcción edificación",
+    # Herramientas y lenguajes de IA para la industria
+    "herramientas IA para inmobiliarias mejores software",
+    "AI tools real estate agents property management",
+    "ChatGPT Claude copilot herramientas inmobiliario",
+    "Python machine learning real estate prediction",
+    # Claude / Anthropic en Real Estate
+    "Claude Anthropic real estate aplicaciones",
+    "Anthropic AI construction property technology",
+    "Claude AI inmobiliario automatización agentes",
 ]
 
 GOOGLE_NEWS_QUERIES = [
@@ -33,39 +42,60 @@ GOOGLE_NEWS_QUERIES = [
     "proptech real estate AI",
     "artificial intelligence construction",
     "automatización bienes raíces",
+    # Herramientas de IA para el sector
+    "AI tools real estate property",
+    "herramientas inteligencia artificial inmobiliarias",
+    # Claude / Anthropic
+    "Anthropic Claude real estate",
+    "Claude AI property construction",
 ]
 
-ANALYSIS_PROMPT = """Eres un analista experto en el sector inmobiliario y en la aplicación de
-inteligencia artificial en construcción y bienes raíces.
+ANALYSIS_PROMPT = """Eres un analista experto en el sector inmobiliario, en herramientas de IA
+y en la aplicación de inteligencia artificial (especialmente Claude de Anthropic) en
+construcción y bienes raíces.
 
 Analiza las siguientes noticias extraídas de búsquedas web y devuelve un JSON array con las
-noticias más relevantes (máximo 10). Para cada noticia incluye:
+noticias más relevantes (máximo 15). Para cada noticia incluye:
 
 - "title": Título de la noticia
-- "category": Categoría (una de: "Inmobiliario", "IA en Construcción", "PropTech", "IA Empresarial", "Innovación Inmobiliaria")
+- "category": Categoría (una de:
+    "Inmobiliario" - noticias generales del sector,
+    "IA en Construcción" - aplicación de IA en obra y edificación,
+    "PropTech" - startups y tecnología inmobiliaria,
+    "IA Empresarial" - avances generales de IA aplicados a negocio,
+    "Innovación Inmobiliaria" - nuevos modelos y tendencias,
+    "Herramientas IA" - software, APIs, lenguajes y plataformas de IA útiles para el sector (ej: ChatGPT, Claude, Copilot, Python, TensorFlow, etc.),
+    "Claude & Anthropic" - noticias específicas sobre Claude, Anthropic y sus aplicaciones en real estate y construcción)
 - "summary": Resumen de 2-3 oraciones en español
 - "url": URL de la noticia (la original, no inventada)
+- "ai_tools_mentioned": Lista de herramientas/plataformas de IA mencionadas (ej: ["Claude", "Python", "TensorFlow"]), vacía si no aplica
 - "score": Puntuación de 1-10 según el interés que generaría en el sector inmobiliario y los avances de IA a nivel empresarial. Criterios:
-  - 8-10: Noticia disruptiva, nuevo producto/regulación, gran impacto en el sector
-  - 5-7: Noticia relevante, tendencia interesante, aplicación práctica de IA
+  - 9-10: Noticia sobre Claude/Anthropic aplicado a real estate, o herramienta de IA disruptiva para el sector
+  - 7-8: Nuevo producto/regulación, caso de uso concreto de IA en inmobiliario
+  - 5-6: Noticia relevante, tendencia interesante, aplicación práctica de IA
   - 1-4: Noticia menor, poca relevancia directa al sector
 
 IMPORTANTE:
 - Solo incluye noticias reales con URLs reales que aparezcan en los resultados.
 - Filtra duplicados y noticias irrelevantes.
 - Prioriza noticias recientes (últimos 7 días).
+- Prioriza noticias sobre herramientas de IA aplicables y sobre Claude/Anthropic en el sector.
 - Devuelve SOLO el JSON array, sin texto adicional ni markdown.
 
 Resultados de búsqueda:
 {search_results}"""
 
-TOPIC_PROMPT = """Basándote en estas noticias del sector inmobiliario y de IA en construcción,
-genera un tema concreto y atractivo para un post de LinkedIn dirigido a profesionales del sector.
+TOPIC_PROMPT = """Basándote en estas noticias del sector inmobiliario, herramientas de IA y
+aplicaciones de Claude/Anthropic en real estate, genera un tema concreto y atractivo para
+un post de LinkedIn dirigido a profesionales del sector.
 
 El tema debe:
 - Ser específico y basado en una noticia real
 - Generar engagement y debate
-- Conectar IA con el sector inmobiliario/construcción
+- Puede tomar uno de estos enfoques (elige el más atractivo según las noticias):
+  a) Conectar IA con el sector inmobiliario/construcción
+  b) Recomendar herramientas de IA concretas y cómo usarlas en la industria
+  c) Mostrar cómo Claude/Anthropic puede aplicarse en real estate (valoraciones, análisis de mercado, generación de listings, atención al cliente, etc.)
 
 Noticias (ordenadas por relevancia):
 {news_summary}
@@ -274,6 +304,7 @@ class TooxsNews:
         rows = []
         for n in news:
             news_id = self.generate_news_id(n.get("title", ""), n.get("url", ""))
+            ai_tools = ", ".join(n.get("ai_tools_mentioned", []))
             rows.append([
                 news_id,
                 n.get("category", "Sin categoría"),
@@ -282,5 +313,6 @@ class TooxsNews:
                 n.get("summary", ""),
                 n.get("url", ""),
                 n.get("score", 0),
+                ai_tools,
             ])
         return rows
