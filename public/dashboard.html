@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn Tool - Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f3f2ef;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .topbar {
+            background: #fff;
+            border-bottom: 1px solid #ddd;
+            padding: 0 24px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .topbar-brand { font-weight: 700; color: #0a66c2; font-size: 1.2rem; }
+        .topbar-user { display: flex; align-items: center; gap: 12px; }
+        .topbar-avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: #0a66c2; color: #fff; display: flex;
+            align-items: center; justify-content: center;
+            font-weight: 600; font-size: 0.85rem;
+        }
+        .topbar-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+        .topbar-name { font-weight: 500; font-size: 0.9rem; }
+        .btn-logout {
+            background: none; border: 1px solid #ccc; padding: 6px 14px;
+            border-radius: 20px; font-size: 0.8rem; cursor: pointer; color: #555;
+        }
+        .btn-logout:hover { border-color: #0a66c2; color: #0a66c2; }
+
+        /* Layout */
+        .dashboard {
+            max-width: 900px;
+            margin: 24px auto;
+            padding: 0 16px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        /* Cards */
+        .card {
+            background: #fff;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-header h2 { font-size: 1.1rem; font-weight: 600; }
+        .card-body { padding: 20px; }
+
+        /* Compose Post */
+        .compose-area {
+            width: 100%;
+            min-height: 100px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 14px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .compose-area:focus { border-color: #0a66c2; }
+        .compose-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+        .char-count { font-size: 0.8rem; color: #888; }
+        .btn-post {
+            background: #0a66c2;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-post:hover { background: #004182; }
+        .btn-post:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* Posts Feed */
+        .post-item {
+            padding: 16px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .post-item:last-child { border-bottom: none; }
+        .post-text {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            white-space: pre-wrap;
+        }
+        .post-meta {
+            display: flex;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: #888;
+        }
+        .post-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .btn-action {
+            background: none;
+            border: 1px solid #ddd;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            color: #555;
+        }
+        .btn-action:hover { border-color: #0a66c2; color: #0a66c2; }
+        .btn-action.liked { border-color: #0a66c2; color: #0a66c2; background: #e8f0fe; }
+        .btn-delete { color: #cc3333; }
+        .btn-delete:hover { border-color: #cc3333; color: #cc3333; }
+
+        /* Comments Panel */
+        .comments-panel {
+            display: none;
+            margin-top: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .comments-panel.open { display: block; }
+        .comment-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.9rem;
+        }
+        .comment-item:last-child { border-bottom: none; }
+        .comment-author { font-weight: 600; font-size: 0.85rem; }
+        .comment-text { margin-top: 4px; color: #444; }
+        .comment-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .comment-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-family: inherit;
+            outline: none;
+        }
+        .comment-input:focus { border-color: #0a66c2; }
+        .btn-comment {
+            background: #0a66c2;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Reactions Picker */
+        .reactions-picker {
+            display: none;
+            margin-top: 8px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            padding: 6px 12px;
+            gap: 4px;
+        }
+        .reactions-picker.open { display: inline-flex; }
+        .reaction-btn {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .reaction-btn:hover { background: #e8f0fe; }
+        .reaction-btn .label { font-size: 0.65rem; display: block; text-align: center; }
+
+        /* Status Messages */
+        .status-msg {
+            padding: 10px 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .status-msg.success { display: block; background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-msg.error { display: block; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        .spinner {
+            display: inline-block;
+            width: 24px; height: 24px;
+            border: 3px solid #ddd;
+            border-top-color: #0a66c2;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 32px;
+            color: #999;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .dashboard { margin: 12px auto; }
+            .card-body { padding: 14px; }
+            .post-actions { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <a href="/" class="topbar-brand">LinkedIn Tool</a>
+        <div class="topbar-user">
+            <div class="topbar-avatar" id="userAvatar">?</div>
+            <span class="topbar-name" id="userName">Cargando...</span>
+            <button class="btn-logout" onclick="logout()">Salir</button>
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Status Message -->
+        <div class="status-msg" id="statusMsg"></div>
+
+        <!-- Compose Post -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Crear publicación</h2>
+            </div>
+            <div class="card-body">
+                <textarea class="compose-area" id="postText" placeholder="¿Qué quieres compartir?" maxlength="3000"></textarea>
+                <div class="compose-actions">
+                    <span class="char-count"><span id="charCount">0</span> / 3000</span>
+                    <button class="btn-post" id="publishBtn" onclick="publishPost()">Publicar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- My Posts -->
+        <div class="card">
+            <div class="card-header">
+                <h2>Mis publicaciones</h2>
+                <button class="btn-action" onclick="loadPosts()">&#8635; Actualizar</button>
+            </div>
+            <div class="card-body" id="postsContainer">
+                <div class="loading"><div class="spinner"></div><p>Cargando posts...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const postText = document.getElementById('postText');
+        const charCount = document.getElementById('charCount');
+        const publishBtn = document.getElementById('publishBtn');
+        const postsContainer = document.getElementById('postsContainer');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // Character counter
+        postText.addEventListener('input', () => {
+            charCount.textContent = postText.value.length;
+            publishBtn.disabled = postText.value.trim().length === 0;
+        });
+
+        // Check auth status and load data
+        async function init() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                if (!data.authenticated) {
+                    window.location.href = '/?error=not_authenticated';
+                    return;
+                }
+
+                const user = data.user;
+                document.getElementById('userName').textContent = user.name || 'Usuario';
+
+                const avatar = document.getElementById('userAvatar');
+                if (user.picture) {
+                    avatar.innerHTML = `<img src="${user.picture}" alt="${user.name}">`;
+                } else {
+                    avatar.textContent = (user.name || 'U').charAt(0).toUpperCase();
+                }
+
+                loadPosts();
+            } catch {
+                showStatus('Error al verificar autenticación', 'error');
+            }
+        }
+
+        // Publish a post
+        async function publishPost() {
+            const text = postText.value.trim();
+            if (!text) return;
+
+            publishBtn.disabled = true;
+            publishBtn.textContent = 'Publicando...';
+
+            try {
+                const res = await fetch('/api/linkedin/posts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    showStatus('Post publicado exitosamente', 'success');
+                    postText.value = '';
+                    charCount.textContent = '0';
+                    loadPosts();
+                } else {
+                    showStatus(data.error || 'Error al publicar', 'error');
+                }
+            } catch {
+                showStatus('Error de conexión', 'error');
+            } finally {
+                publishBtn.disabled = false;
+                publishBtn.textContent = 'Publicar';
+            }
+        }
+
+        // Load my posts
+        async function loadPosts() {
+            postsContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando posts...</p></div>';
+
+            try {
+                const res = await fetch('/api/linkedin/posts');
+                const data = await res.json();
+
+                if (!res.ok) {
+                    postsContainer.innerHTML = `<div class="empty-state">Error: ${data.error}</div>`;
+                    return;
+                }
+
+                const posts = data.elements || [];
+                if (posts.length === 0) {
+                    postsContainer.innerHTML = '<div class="empty-state">No tienes publicaciones aún. ¡Crea tu primer post!</div>';
+                    return;
+                }
+
+                postsContainer.innerHTML = posts.map(post => renderPost(post)).join('');
+            } catch {
+                postsContainer.innerHTML = '<div class="empty-state">Error al cargar publicaciones</div>';
+            }
+        }
+
+        // Render a single post
+        function renderPost(post) {
+            const id = post.id || post.urn || '';
+            const text = post.commentary || post.text || '';
+            const date = post.createdAt ? new Date(post.createdAt).toLocaleDateString('es') : '';
+
+            return `
+                <div class="post-item" data-post-id="${id}">
+                    <div class="post-text">${escapeHtml(text)}</div>
+                    <div class="post-meta">
+                        ${date ? `<span>${date}</span>` : ''}
+                    </div>
+                    <div class="post-actions">
+                        <button class="btn-action" onclick="toggleReactions('${id}')">
+                            &#128077; Reaccionar
+                        </button>
+                        <button class="btn-action" onclick="toggleComments('${id}')">
+                            &#128172; Comentarios
+                        </button>
+                        <button class="btn-action btn-delete" onclick="deletePost('${id}')">
+                            &#128465; Eliminar
+                        </button>
+                    </div>
+                    <div class="reactions-picker" id="reactions-${id}">
+                        <button class="reaction-btn" onclick="reactToPost('${id}', 'LIKE')">&#128077;<span class="label">Me gusta</span></button>
+                        <button class="reaction-btn" onclick="reactToPost('${id}', 'PRAISE')">&#128079;<span class="label">Genial</span></button>
+                        <button class="reaction-btn" onclick="reactToPost('${id}', 'EMPATHY')">&#10084;&#65039;<span class="label">Encanta</span></button>
+                        <button class="reaction-btn" onclick="reactToPost('${id}', 'INTEREST')">&#128161;<span class="label">Interesa</span></button>
+                        <button class="reaction-btn" onclick="reactToPost('${id}', 'APPRECIATION')">&#128588;<span class="label">Apoyo</span></button>
+                    </div>
+                    <div class="comments-panel" id="comments-${id}">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Toggle reactions picker
+        function toggleReactions(postId) {
+            document.getElementById(`reactions-${postId}`).classList.toggle('open');
+        }
+
+        // React to a post
+        async function reactToPost(postId, reactionType) {
+            try {
+                const res = await fetch(`/api/linkedin/posts/${encodeURIComponent(postId)}/reactions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ reactionType })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showStatus(data.message, 'success');
+                    document.getElementById(`reactions-${postId}`).classList.remove('open');
+                } else {
+                    showStatus(data.error, 'error');
+                }
+            } catch {
+                showStatus('Error al reaccionar', 'error');
+            }
+        }
+
+        // Toggle comments panel
+        async function toggleComments(postId) {
+            const panel = document.getElementById(`comments-${postId}`);
+            panel.classList.toggle('open');
+
+            if (panel.classList.contains('open')) {
+                loadComments(postId);
+            }
+        }
+
+        // Load comments for a post
+        async function loadComments(postId) {
+            const panel = document.getElementById(`comments-${postId}`);
+            panel.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const res = await fetch(`/api/linkedin/posts/${encodeURIComponent(postId)}/comments`);
+                const data = await res.json();
+
+                const comments = data.elements || [];
+                let html = comments.map(c => `
+                    <div class="comment-item">
+                        <div class="comment-author">${escapeHtml(c.actor || 'Usuario')}</div>
+                        <div class="comment-text">${escapeHtml(c.message?.text || c.comment || '')}</div>
+                    </div>
+                `).join('');
+
+                if (comments.length === 0) {
+                    html = '<p style="color:#999;font-size:0.85rem;">No hay comentarios aún.</p>';
+                }
+
+                html += `
+                    <div class="comment-input-row">
+                        <input type="text" class="comment-input" id="comment-input-${postId}"
+                               placeholder="Escribe un comentario..." />
+                        <button class="btn-comment" onclick="postComment('${postId}')">Enviar</button>
+                    </div>
+                `;
+
+                panel.innerHTML = html;
+            } catch {
+                panel.innerHTML = '<p style="color:#cc3333;font-size:0.85rem;">Error al cargar comentarios</p>';
+            }
+        }
+
+        // Post a comment
+        async function postComment(postId) {
+            const input = document.getElementById(`comment-input-${postId}`);
+            const text = input.value.trim();
+            if (!text) return;
+
+            try {
+                const res = await fetch(`/api/linkedin/posts/${encodeURIComponent(postId)}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showStatus('Comentario publicado', 'success');
+                    loadComments(postId);
+                } else {
+                    showStatus(data.error, 'error');
+                }
+            } catch {
+                showStatus('Error al comentar', 'error');
+            }
+        }
+
+        // Delete a post
+        async function deletePost(postId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este post?')) return;
+
+            try {
+                const res = await fetch(`/api/linkedin/posts/${encodeURIComponent(postId)}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    showStatus('Post eliminado', 'success');
+                    loadPosts();
+                } else {
+                    showStatus(data.error, 'error');
+                }
+            } catch {
+                showStatus('Error al eliminar', 'error');
+            }
+        }
+
+        // Logout
+        function logout() {
+            window.location.href = '/auth/logout';
+        }
+
+        // Show status message
+        function showStatus(msg, type) {
+            statusMsg.textContent = msg;
+            statusMsg.className = `status-msg ${type}`;
+            setTimeout(() => { statusMsg.className = 'status-msg'; }, 4000);
+        }
+
+        // Escape HTML
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Init
+        init();
+    </script>
+</body>
+</html>
