@@ -87,22 +87,33 @@ class TooxsLkdn:
         self._topic_index = (self._topic_index + 1) % len(self.topics)
         return topic
 
-    def run_once(self, override_topic: str | None = None):
+    def run_once(
+        self,
+        override_topic: str | None = None,
+        override_text: str | None = None,
+    ):
         """Genera y publica un solo post.
 
         Args:
             override_topic: Si se proporciona, usa este tema en vez de rotar.
+            override_text: Si se proporciona, publica este texto directamente
+                           (sin generar con PostGenerator). Usado por TooxsRedactor.
         """
-        topic = override_topic or self._next_topic()
-        logger.info("Tema seleccionado: %s", topic)
+        if override_text:
+            post_text = override_text
+            topic = "(redactado por TooxsRedactor)"
+            logger.info("Usando texto de TooxsRedactor (%d caracteres)", len(post_text))
+        else:
+            topic = override_topic or self._next_topic()
+            logger.info("Tema seleccionado: %s", topic)
 
-        try:
-            post_text = self.generator.generate(
-                topic=topic, language=self.language, tone=self.tone
-            )
-        except Exception:
-            logger.exception("Error generando post")
-            return
+            try:
+                post_text = self.generator.generate(
+                    topic=topic, language=self.language, tone=self.tone
+                )
+            except Exception:
+                logger.exception("Error generando post")
+                return
 
         logger.info("Post generado (%d caracteres):\n%s", len(post_text), post_text)
 

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from src.linkedin_client import LinkedInClient
 from src.post_generator import PostGenerator
 from src.tooxs_lkdn import TooxsLkdn
+from src.tooxs_redactor import TooxsRedactor
 from src.orchestrator import Orchestrator
 
 
@@ -96,6 +97,42 @@ def cmd_publish(args):
     print(f"Post publicado exitosamente. Status: {result['status_code']}")
 
 
+def cmd_redact(args):
+    """Genera una propuesta completa con TooxsRedactor (post + imagen + video)."""
+    load_dotenv()
+    api_key = get_env_or_exit("ANTHROPIC_API_KEY")
+    stability_key = os.getenv("STABILITY_API_KEY")
+
+    redactor = TooxsRedactor(
+        anthropic_key=api_key,
+        stability_key=stability_key,
+        personality_path=os.getenv("PERSONALITY_PATH", "config/Manuel Aravena.md"),
+    )
+
+    news = {
+        "title": args.title,
+        "summary": args.summary or args.title,
+        "category": args.category or "IA Empresarial",
+        "url": args.url or "",
+        "score": 8,
+    }
+
+    proposal = redactor.create_proposal(news)
+
+    print("\n--- Post Redactado por TooxsRedactor ---\n")
+    print(proposal["post_text"])
+    print("\n--- Imagen ---")
+    print(f"Prompt: {proposal['image_prompt'][:200]}...")
+    print(f"Archivo: {proposal.get('image_path', 'N/A')}")
+    print("\n--- Video Storyboard ---")
+    sb = proposal.get("storyboard", {})
+    print(f"Título: {sb.get('title', 'N/A')}")
+    for scene in sb.get("scenes", []):
+        print(f"  Escena {scene.get('scene_number')}: {scene.get('text_overlay', '')}")
+    print(f"\nPropuesta completa guardada en: output/proposal.json")
+    print("\n--- Fin ---\n")
+
+
 def cmd_improve(args):
     """Mejora un borrador de post."""
     load_dotenv()
@@ -180,6 +217,14 @@ def main():
     pub_p.add_argument("--text", help="Texto directo a publicar")
     pub_p.add_argument("-y", "--yes", action="store_true", help="Sin confirmación")
     pub_p.set_defaults(func=cmd_publish)
+
+    # redact: TooxsRedactor genera propuesta completa
+    red_p = subparsers.add_parser("redact", help="TooxsRedactor: post + imagen + video desde una noticia")
+    red_p.add_argument("title", help="Título de la noticia")
+    red_p.add_argument("--summary", "-s", help="Resumen de la noticia")
+    red_p.add_argument("--category", "-c", help="Categoría (ej: PropTech, IA en Construcción)")
+    red_p.add_argument("--url", "-u", help="URL de la noticia original")
+    red_p.set_defaults(func=cmd_redact)
 
     # improve
     imp_p = subparsers.add_parser("improve", help="Mejora un borrador de post")

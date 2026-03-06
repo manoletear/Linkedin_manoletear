@@ -1,13 +1,16 @@
 """
-Orquestador que conecta el agente de noticias (TooxsNews)
-con el agente de publicación (TooxsLkdn).
+Orquestador que conecta los tres agentes:
+- TooxsNews: busca y analiza noticias
+- TooxsRedactor: redacta posts con personalidad + genera imagen y video
+- TooxsLkdn: publica en LinkedIn
 
 Flujo diario:
 1. TooxsNews busca noticias del sector inmobiliario + IA
 2. Analiza y puntúa las noticias con Claude
 3. Registra cada noticia en Google Sheets
-4. Genera un tema basado en las noticias top
-5. TooxsLkdn genera y publica un post con ese tema
+4. TooxsRedactor redacta el post con la voz de Manuel Aravena
+5. TooxsRedactor genera imagen y storyboard de video
+6. TooxsLkdn publica el post en LinkedIn
 """
 
 import logging
@@ -22,6 +25,7 @@ from dotenv import load_dotenv
 from src.news_researcher import TooxsNews
 from src.sheets_client import SheetsClient
 from src.tooxs_lkdn import TooxsLkdn
+from src.tooxs_redactor import TooxsRedactor
 
 logger = logging.getLogger("TooxsNews.Orchestrator")
 
@@ -33,6 +37,7 @@ SHEETS_HEADERS = [
     "Resumen",
     "Link",
     "Score",
+    "Herramientas IA",
 ]
 WORKSHEET_NAME = "Noticias_IA_Inmobiliario"
 
@@ -55,6 +60,12 @@ class Orchestrator:
         self.sheets = SheetsClient(
             credentials_path=sheets_creds,
             spreadsheet_id=sheets_id,
+        )
+
+        self.redactor = TooxsRedactor(
+            anthropic_key=os.environ["ANTHROPIC_API_KEY"],
+            stability_key=os.getenv("STABILITY_API_KEY"),
+            personality_path=os.getenv("PERSONALITY_PATH", "config/Manuel Aravena.md"),
         )
 
         self.publisher = TooxsLkdn()
@@ -117,17 +128,27 @@ class Orchestrator:
         else:
             logger.info("No hay noticias nuevas para registrar.")
 
-        # 4. Generar tema basado en noticias top
-        logger.info("Paso 4: Generando tema para post...")
-        topic = self.researcher.generate_topic_from_news(analyzed_news)
-        if topic:
-            logger.info("Tema generado: %s", topic)
-        else:
-            logger.warning("No se pudo generar tema. Usando rotación normal.")
+        # 4. TooxsRedactor: redactar post + imagen + video
+        best_news = max(analyzed_news, key=lambda n: n.get("score", 0))
+        logger.info("Paso 4: TooxsRedactor redactando sobre: %s", best_news.get("title", ""))
+        proposal = self.redactor.create_proposal(best_news)
 
-        # 5. Publicar en LinkedIn
-        logger.info("Paso 5: Generando y publicando post...")
-        self.publisher.run_once(override_topic=topic or None)
+        if proposal.get("post_text"):
+            # 5. Publicar en LinkedIn con el texto redactado por TooxsRedactor
+            logger.info("Paso 5: Publicando post redactado...")
+            self.publisher.run_once(override_text=proposal["post_text"])
+
+            if proposal.get("image_path"):
+                logger.info("Imagen generada: %s", proposal["image_path"])
+            if proposal.get("storyboard", {}).get("scenes"):
+                logger.info(
+                    "Storyboard de video: %d escenas. Ver output/proposal.json",
+                    len(proposal["storyboard"]["scenes"]),
+                )
+        else:
+            logger.warning("TooxsRedactor no generó post. Usando flujo alternativo...")
+            topic = self.researcher.generate_topic_from_news(analyzed_news)
+            self.publisher.run_once(override_topic=topic or None)
 
         logger.info("=== Ciclo diario completado ===")
 

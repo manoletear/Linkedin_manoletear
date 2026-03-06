@@ -1,8 +1,9 @@
 # TooxsLkdn - Agente Autónomo de LinkedIn + Investigación de Noticias
 
-Sistema de dos agentes que trabajan juntos:
+Sistema de tres agentes que trabajan juntos:
 1. **TooxsNews** - Busca noticias diarias del sector inmobiliario + IA en construcción, herramientas de IA para la industria y aplicaciones de Claude/Anthropic en real estate. Las analiza, puntúa y registra en Google Sheets.
-2. **TooxsLkdn** - Genera y publica posts en LinkedIn basados en las noticias más relevantes del día.
+2. **TooxsRedactor** - Lee el perfil de personalidad de Manuel Aravena, redacta posts con su voz, genera imágenes con Stability AI y crea storyboards de video.
+3. **TooxsLkdn** - Publica los posts en LinkedIn.
 
 ## Flujo Diario Automático
 
@@ -11,8 +12,11 @@ Sistema de dos agentes que trabajan juntos:
    ↓   Claude analiza y puntúa cada noticia (score 1-10)
    ↓   Categoriza: Inmobiliario, IA en Construcción, PropTech, Herramientas IA, Claude & Anthropic...
    ↓   Registra en Google Sheets: ID, rubro, fecha, resumen, link, score, herramientas IA
-   ↓   Genera un tema basado en las noticias top
-09:00  TooxsLkdn genera un post con Claude y lo publica en LinkedIn
+   ↓   TooxsRedactor selecciona la mejor noticia
+   ↓   Redacta el post con la voz de Manuel Aravena
+   ↓   Genera imagen con Stability AI
+   ↓   Crea storyboard de video (4-5 escenas)
+09:00  TooxsLkdn publica el post en LinkedIn
 ```
 
 ## Google Sheets Output
@@ -84,6 +88,20 @@ python -m src.agent start
 python -m src.agent post-now
 ```
 
+### TooxsRedactor - Redacción con personalidad + imagen + video
+
+```bash
+# Crear propuesta completa desde una noticia
+python -m src.agent redact "IA revoluciona las valoraciones inmobiliarias" \
+  -s "Nuevas herramientas de IA permiten valorar propiedades con 95% de precisión" \
+  -c "PropTech"
+
+# La propuesta se guarda en output/proposal.json con:
+# - Post redactado con la voz de Manuel Aravena
+# - Imagen generada (o prompt si no hay STABILITY_API_KEY)
+# - Storyboard de video con 4-5 escenas
+```
+
 ### Comandos manuales
 
 ```bash
@@ -114,6 +132,8 @@ python -m src.agent history -n 5
 | `ANTHROPIC_API_KEY` | API Key de Anthropic (Claude) | Sí |
 | `GOOGLE_SPREADSHEET_ID` | ID del Google Sheet | Para `full`/`research-now` |
 | `GOOGLE_CREDENTIALS_PATH` | Ruta al JSON de credenciales | Para `full`/`research-now` |
+| `STABILITY_API_KEY` | API Key de Stability AI (imágenes) | No (opcional) |
+| `PERSONALITY_PATH` | Ruta al archivo de personalidad | No (default: `config/Manuel Aravena.md`) |
 | `SERPER_API_KEY` | API Key de Serper | No (opcional) |
 | `NEWSAPI_KEY` | API Key de NewsAPI | No (opcional) |
 | `POST_LANGUAGE` | Idioma de los posts (default: `es`) | No |
@@ -126,16 +146,19 @@ python -m src.agent history -n 5
 ├── src/
 │   ├── __init__.py
 │   ├── agent.py             # CLI entry point
-│   ├── orchestrator.py      # Orquestador (conecta ambos agentes)
-│   ├── tooxs_lkdn.py        # Agente de publicación LinkedIn
+│   ├── orchestrator.py      # Orquestador (conecta los tres agentes)
+│   ├── tooxs_lkdn.py        # TooxsLkdn - Agente de publicación LinkedIn
+│   ├── tooxs_redactor.py    # TooxsRedactor - Redacción + imagen + video
 │   ├── news_researcher.py   # TooxsNews - Agente de investigación de noticias
 │   ├── sheets_client.py     # Cliente de Google Sheets
 │   ├── linkedin_client.py   # Cliente API de LinkedIn
 │   └── post_generator.py    # Generador de posts con Claude
 ├── config/
+│   ├── Manuel Aravena.md     # Perfil de personalidad para TooxsRedactor
 │   ├── topics.json           # Temas para modo solo-publicación
 │   ├── credentials.json      # Credenciales Google (no versionado)
 │   └── post_history.json     # Historial de posts (auto-generado)
+├── output/                    # Propuestas generadas por TooxsRedactor (auto-generado)
 ├── .env.example
 ├── .gitignore
 ├── requirements.txt
