@@ -1,5 +1,5 @@
 """
-Agente de investigación de noticias inmobiliarias y de IA en construcción.
+TooxsNews - Agente de investigación de noticias inmobiliarias y de IA en construcción.
 
 Busca noticias diarias, las analiza con Claude, las puntúa por relevancia
 y las registra en Google Sheets.
@@ -14,7 +14,7 @@ from datetime import datetime
 import anthropic
 import requests
 
-logger = logging.getLogger("TooxsLkdn.NewsResearcher")
+logger = logging.getLogger("TooxsNews")
 
 SEARCH_QUERIES = [
     "inteligencia artificial sector inmobiliario noticias",
@@ -63,7 +63,7 @@ Noticias (ordenadas por relevancia):
 Devuelve SOLO el tema como una frase, sin explicaciones."""
 
 
-class NewsResearcher:
+class TooxsNews:
     """Busca y analiza noticias del sector inmobiliario y IA en construcción."""
 
     SERPER_URL = "https://google.serper.dev/search"

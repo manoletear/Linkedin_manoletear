@@ -1,9 +1,9 @@
 """
-Orquestador que conecta el agente de noticias (NewsResearcher)
+Orquestador que conecta el agente de noticias (TooxsNews)
 con el agente de publicación (TooxsLkdn).
 
 Flujo diario:
-1. NewsResearcher busca noticias del sector inmobiliario + IA
+1. TooxsNews busca noticias del sector inmobiliario + IA
 2. Analiza y puntúa las noticias con Claude
 3. Registra cada noticia en Google Sheets
 4. Genera un tema basado en las noticias top
@@ -19,11 +19,11 @@ import time
 import schedule
 from dotenv import load_dotenv
 
-from src.news_researcher import NewsResearcher
+from src.news_researcher import TooxsNews
 from src.sheets_client import SheetsClient
 from src.tooxs_lkdn import TooxsLkdn
 
-logger = logging.getLogger("TooxsLkdn.Orchestrator")
+logger = logging.getLogger("TooxsNews.Orchestrator")
 
 SHEETS_HEADERS = [
     "ID Noticia",
@@ -44,7 +44,7 @@ class Orchestrator:
         load_dotenv()
         self._validate_env()
 
-        self.researcher = NewsResearcher(
+        self.researcher = TooxsNews(
             anthropic_key=os.environ["ANTHROPIC_API_KEY"],
             serper_key=os.getenv("SERPER_API_KEY"),
             newsapi_key=os.getenv("NEWSAPI_KEY"),

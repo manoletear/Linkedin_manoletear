@@ -1,13 +1,13 @@
 # TooxsLkdn - Agente Autónomo de LinkedIn + Investigación de Noticias
 
 Sistema de dos agentes que trabajan juntos:
-1. **NewsResearcher** - Busca noticias diarias del sector inmobiliario + IA en construcción, las analiza, puntúa y registra en Google Sheets.
+1. **TooxsNews** - Busca noticias diarias del sector inmobiliario + IA en construcción, las analiza, puntúa y registra en Google Sheets.
 2. **TooxsLkdn** - Genera y publica posts en LinkedIn basados en las noticias más relevantes del día.
 
 ## Flujo Diario Automático
 
 ```
-08:00  NewsResearcher busca noticias (Serper / NewsAPI)
+08:00  TooxsNews busca noticias (Serper / NewsAPI)
    ↓   Claude analiza y puntúa cada noticia (score 1-10)
    ↓   Registra en Google Sheets: ID, rubro, fecha, resumen, link, score
    ↓   Genera un tema basado en las noticias top
@@ -126,7 +126,7 @@ python -m src.agent history -n 5
 │   ├── agent.py             # CLI entry point
 │   ├── orchestrator.py      # Orquestador (conecta ambos agentes)
 │   ├── tooxs_lkdn.py        # Agente de publicación LinkedIn
-│   ├── news_researcher.py   # Agente de investigación de noticias
+│   ├── news_researcher.py   # TooxsNews - Agente de investigación de noticias
 │   ├── sheets_client.py     # Cliente de Google Sheets
 │   ├── linkedin_client.py   # Cliente API de LinkedIn
 │   └── post_generator.py    # Generador de posts con Claude
