@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import time
+from datetime import datetime
 from pathlib import Path
 
 import anthropic
@@ -18,6 +19,10 @@ import requests
 logger = logging.getLogger("TooxsRedactor")
 
 DEFAULT_PERSONALITY_PATH = "config/Manuel Aravena.md"
+
+DRAFT_STATUS_PENDING = "pendiente"
+DRAFT_STATUS_APPROVED = "aprobado"
+DRAFT_STATUS_REJECTED = "rechazado"
 
 REDACTOR_SYSTEM_PROMPT = """Eres TooxsRedactor, un agente de redacción profesional para LinkedIn.
 
@@ -312,6 +317,8 @@ class TooxsRedactor:
             "storyboard": storyboard,
             "video_image_paths": video_image_paths,
             "news": news,
+            "status": DRAFT_STATUS_PENDING,
+            "created_at": datetime.now().isoformat(),
         }
 
         proposal_path = self.output_dir / "proposal.json"
@@ -322,3 +329,160 @@ class TooxsRedactor:
         logger.info("Propuesta guardada en: %s", proposal_path)
 
         return proposal
+
+    def request_approval_terminal(self, proposal: dict) -> bool:
+        """Solicita aprobación del borrador por terminal (modo manual).
+
+        Muestra el post, imagen y storyboard y espera confirmación del usuario.
+
+        Returns:
+            True si el usuario aprueba, False si rechaza.
+        """
+        print("\n" + "=" * 60)
+        print("  BORRADOR PARA APROBACIÓN - TooxsRedactor")
+        print("=" * 60)
+
+        print(f"\nNoticia: {proposal.get('news', {}).get('title', 'N/A')}")
+        print(f"Categoría: {proposal.get('news', {}).get('category', 'N/A')}")
+        print(f"Score: {proposal.get('news', {}).get('score', 'N/A')}")
+
+        print("\n--- POST DE LINKEDIN ---\n")
+        print(proposal.get("post_text", "(sin texto)"))
+
+        print("\n--- IMAGEN ---")
+        image_path = proposal.get("image_path", "N/A")
+        print(f"Archivo: {image_path}")
+        if proposal.get("image_prompt"):
+            print(f"Prompt: {proposal['image_prompt'][:150]}...")
+
+        sb = proposal.get("storyboard", {})
+        if sb.get("scenes"):
+            print("\n--- VIDEO STORYBOARD ---")
+            print(f"Título: {sb.get('title', 'N/A')}")
+            print(f"Duración: {sb.get('duration_seconds', '?')}s")
+            for scene in sb["scenes"]:
+                print(f"  Escena {scene.get('scene_number', '?')}: {scene.get('text_overlay', '')}")
+            if sb.get("voiceover_script"):
+                print(f"Narración: {sb['voiceover_script'][:100]}...")
+
+        print("\n" + "=" * 60)
+
+        while True:
+            response = input("\n¿Aprobar este borrador? (s=publicar / n=descartar / e=editar): ").strip().lower()
+            if response == "s":
+                proposal["status"] = DRAFT_STATUS_APPROVED
+                logger.info("Borrador APROBADO por el usuario.")
+                return True
+            elif response == "n":
+                proposal["status"] = DRAFT_STATUS_REJECTED
+                logger.info("Borrador RECHAZADO por el usuario.")
+                return False
+            elif response == "e":
+                print("\nPega el texto editado del post (escribe '---FIN---' en una línea aparte para terminar):")
+                lines = []
+                while True:
+                    line = input()
+                    if line.strip() == "---FIN---":
+                        break
+                    lines.append(line)
+                edited_text = "\n".join(lines)
+                if edited_text.strip():
+                    proposal["post_text"] = edited_text
+                    proposal["edited"] = True
+                    print("\nPost actualizado.")
+                else:
+                    print("Texto vacío, manteniendo el original.")
+            else:
+                print("Opción no válida. Usa 's', 'n' o 'e'.")
+
+    def save_draft_to_sheets(self, proposal: dict, sheets_client, worksheet_name: str = "Borradores"):
+        """Guarda el borrador en Google Sheets para aprobación asíncrona (modo automático).
+
+        Args:
+            proposal: Propuesta completa generada por create_proposal.
+            sheets_client: Instancia de SheetsClient.
+            worksheet_name: Nombre de la hoja de borradores.
+
+        Returns:
+            Número de fila donde se guardó el borrador.
+        """
+        headers = [
+            "ID",
+            "Fecha",
+            "Estado",
+            "Noticia",
+            "Categoría",
+            "Post",
+            "Image Prompt",
+            "Image Path",
+            "Storyboard",
+            "Score",
+        ]
+
+        from src.news_researcher import TooxsNews
+        news = proposal.get("news", {})
+        draft_id = TooxsNews.generate_news_id(
+            news.get("title", ""), news.get("url", "")
+        )
+
+        row = [
+            draft_id,
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+            DRAFT_STATUS_PENDING,
+            news.get("title", ""),
+            news.get("category", ""),
+            proposal.get("post_text", ""),
+            proposal.get("image_prompt", ""),
+            proposal.get("image_path", ""),
+            json.dumps(proposal.get("storyboard", {}), ensure_ascii=False),
+            news.get("score", 0),
+        ]
+
+        sheets_client.append_row(worksheet_name, row, headers=headers)
+        logger.info("Borrador guardado en Sheets [%s] con ID: %s", worksheet_name, draft_id)
+        return draft_id
+
+    @staticmethod
+    def check_approved_drafts(sheets_client, worksheet_name: str = "Borradores") -> list[dict]:
+        """Busca borradores aprobados en Google Sheets.
+
+        Args:
+            sheets_client: Instancia de SheetsClient.
+            worksheet_name: Nombre de la hoja de borradores.
+
+        Returns:
+            Lista de borradores aprobados con sus datos.
+        """
+        try:
+            all_values = sheets_client.get_all_values(worksheet_name)
+        except Exception:
+            return []
+
+        if len(all_values) <= 1:
+            return []
+
+        headers = all_values[0]
+        approved = []
+        for i, row in enumerate(all_values[1:], start=2):
+            row_dict = dict(zip(headers, row))
+            if row_dict.get("Estado", "").lower() == DRAFT_STATUS_APPROVED:
+                row_dict["_row_number"] = i
+                approved.append(row_dict)
+
+        return approved
+
+    @staticmethod
+    def mark_draft_published(sheets_client, row_number: int, worksheet_name: str = "Borradores"):
+        """Marca un borrador como publicado en Google Sheets.
+
+        Args:
+            sheets_client: Instancia de SheetsClient.
+            row_number: Número de fila en la hoja.
+            worksheet_name: Nombre de la hoja de borradores.
+        """
+        try:
+            ws = sheets_client.spreadsheet.worksheet(worksheet_name)
+            ws.update_cell(row_number, 3, "publicado")
+            logger.info("Borrador en fila %d marcado como publicado.", row_number)
+        except Exception:
+            logger.exception("Error actualizando estado del borrador")

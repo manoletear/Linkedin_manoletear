@@ -7,16 +7,30 @@ Sistema de tres agentes que trabajan juntos:
 
 ## Flujo Diario Automático
 
+### Modo `full` (automático con aprobación en Sheets)
+
 ```
 08:00  TooxsNews busca noticias (Google News RSS / Serper / NewsAPI)
    ↓   Claude analiza y puntúa cada noticia (score 1-10)
    ↓   Categoriza: Inmobiliario, IA en Construcción, PropTech, Herramientas IA, Claude & Anthropic...
-   ↓   Registra en Google Sheets: ID, rubro, fecha, resumen, link, score, herramientas IA
+   ↓   Registra en Google Sheets (hoja: Noticias_IA_Inmobiliario)
    ↓   TooxsRedactor selecciona la mejor noticia
    ↓   Redacta el post con la voz de Manuel Aravena
-   ↓   Genera imagen con Stability AI
-   ↓   Crea storyboard de video (4-5 escenas)
-09:00  TooxsLkdn publica el post en LinkedIn
+   ↓   Genera imagen + storyboard de video
+   ↓   Guarda borrador en Google Sheets (hoja: Borradores) con estado "pendiente"
+   ↓
+  TÚ   Revisas el borrador en Sheets → cambias estado a "aprobado"
+   ↓
+  c/30m  El orquestador detecta borradores aprobados → TooxsLkdn publica
+```
+
+### Modo `research-now` (manual con aprobación en terminal)
+
+```
+AHORA  TooxsNews busca → Claude analiza → TooxsRedactor redacta
+   ↓   Te muestra el borrador en terminal
+   ↓   Opciones: (s) publicar / (n) descartar / (e) editar
+   ↓   Si apruebas → TooxsLkdn publica inmediatamente
 ```
 
 ## Google Sheets Output

@@ -36,7 +36,7 @@ def cmd_full(args):
 def cmd_research_now(args):
     """Ejecuta el ciclo completo de investigación + publicación ahora."""
     orch = Orchestrator()
-    orch.run_daily_cycle()
+    orch.run_daily_cycle(interactive=True)
 
 
 def cmd_post_now(args):
@@ -118,19 +118,26 @@ def cmd_redact(args):
     }
 
     proposal = redactor.create_proposal(news)
+    approved = redactor.request_approval_terminal(proposal)
 
-    print("\n--- Post Redactado por TooxsRedactor ---\n")
-    print(proposal["post_text"])
-    print("\n--- Imagen ---")
-    print(f"Prompt: {proposal['image_prompt'][:200]}...")
-    print(f"Archivo: {proposal.get('image_path', 'N/A')}")
-    print("\n--- Video Storyboard ---")
-    sb = proposal.get("storyboard", {})
-    print(f"Título: {sb.get('title', 'N/A')}")
-    for scene in sb.get("scenes", []):
-        print(f"  Escena {scene.get('scene_number')}: {scene.get('text_overlay', '')}")
-    print(f"\nPropuesta completa guardada en: output/proposal.json")
-    print("\n--- Fin ---\n")
+    if approved and not args.no_publish:
+        token = os.getenv("LINKEDIN_ACCESS_TOKEN")
+        if token:
+            linkedin = LinkedInClient(access_token=token)
+            dry_run = os.getenv("DRY_RUN", "false").lower() == "true"
+            if dry_run:
+                print("[DRY RUN] Post aprobado pero no publicado.")
+            elif linkedin.validate_token():
+                result = linkedin.create_post(proposal["post_text"])
+                print(f"Post publicado exitosamente. Status: {result['status_code']}")
+            else:
+                print("Error: Token de LinkedIn inválido. Post guardado en output/proposal.json")
+        else:
+            print("Sin LINKEDIN_ACCESS_TOKEN. Post aprobado guardado en output/proposal.json")
+    elif approved:
+        print("Post aprobado. Guardado en output/proposal.json (--no-publish activo)")
+    else:
+        print("Borrador descartado.")
 
 
 def cmd_improve(args):
@@ -224,6 +231,7 @@ def main():
     red_p.add_argument("--summary", "-s", help="Resumen de la noticia")
     red_p.add_argument("--category", "-c", help="Categoría (ej: PropTech, IA en Construcción)")
     red_p.add_argument("--url", "-u", help="URL de la noticia original")
+    red_p.add_argument("--no-publish", action="store_true", help="Solo generar, no publicar aunque se apruebe")
     red_p.set_defaults(func=cmd_redact)
 
     # improve

@@ -90,8 +90,13 @@ class Orchestrator:
         except Exception:
             return set()
 
-    def run_daily_cycle(self):
-        """Ejecuta el ciclo completo: buscar → analizar → registrar → publicar."""
+    def run_daily_cycle(self, interactive: bool = False):
+        """Ejecuta el ciclo completo: buscar → analizar → registrar → aprobar → publicar.
+
+        Args:
+            interactive: Si True, pide aprobación por terminal (research-now).
+                         Si False, guarda borrador en Sheets (full).
+        """
         logger.info("=== Iniciando ciclo diario ===")
 
         # 1. Buscar noticias
@@ -133,24 +138,60 @@ class Orchestrator:
         logger.info("Paso 4: TooxsRedactor redactando sobre: %s", best_news.get("title", ""))
         proposal = self.redactor.create_proposal(best_news)
 
-        if proposal.get("post_text"):
-            # 5. Publicar en LinkedIn con el texto redactado por TooxsRedactor
-            logger.info("Paso 5: Publicando post redactado...")
-            self.publisher.run_once(override_text=proposal["post_text"])
-
-            if proposal.get("image_path"):
-                logger.info("Imagen generada: %s", proposal["image_path"])
-            if proposal.get("storyboard", {}).get("scenes"):
-                logger.info(
-                    "Storyboard de video: %d escenas. Ver output/proposal.json",
-                    len(proposal["storyboard"]["scenes"]),
-                )
-        else:
+        if not proposal.get("post_text"):
             logger.warning("TooxsRedactor no generó post. Usando flujo alternativo...")
             topic = self.researcher.generate_topic_from_news(analyzed_news)
             self.publisher.run_once(override_topic=topic or None)
+            logger.info("=== Ciclo diario completado ===")
+            return
+
+        if interactive:
+            # Modo manual (research-now): aprobación por terminal
+            approved = self.redactor.request_approval_terminal(proposal)
+            if approved:
+                logger.info("Paso 5: Publicando post aprobado...")
+                self.publisher.run_once(override_text=proposal["post_text"])
+            else:
+                logger.info("Borrador rechazado. No se publica.")
+        else:
+            # Modo automático (full): guardar borrador en Sheets para aprobación
+            logger.info("Paso 5: Guardando borrador en Sheets para aprobación...")
+            self.redactor.save_draft_to_sheets(proposal, self.sheets)
+            logger.info("Borrador guardado. Cambia el estado a 'aprobado' en la hoja 'Borradores'.")
+
+            # También verificar si hay borradores previamente aprobados
+            self._publish_approved_drafts()
+
+        if proposal.get("image_path"):
+            logger.info("Imagen generada: %s", proposal["image_path"])
+        if proposal.get("storyboard", {}).get("scenes"):
+            logger.info(
+                "Storyboard de video: %d escenas. Ver output/proposal.json",
+                len(proposal["storyboard"]["scenes"]),
+            )
 
         logger.info("=== Ciclo diario completado ===")
+
+    def _publish_approved_drafts(self):
+        """Busca y publica borradores aprobados en Google Sheets."""
+        from src.tooxs_redactor import TooxsRedactor
+
+        approved = TooxsRedactor.check_approved_drafts(self.sheets)
+        if not approved:
+            logger.info("No hay borradores aprobados pendientes de publicación.")
+            return
+
+        for draft in approved:
+            post_text = draft.get("Post", "")
+            if not post_text:
+                continue
+
+            logger.info("Publicando borrador aprobado: %s", draft.get("Noticia", ""))
+            self.publisher.run_once(override_text=post_text)
+            TooxsRedactor.mark_draft_published(
+                self.sheets, draft["_row_number"]
+            )
+            logger.info("Borrador publicado y marcado como 'publicado'.")
 
     def start(self, research_time: str = "08:00", post_time: str = "09:00"):
         """Inicia el orquestador con schedule.
@@ -167,8 +208,11 @@ class Orchestrator:
         signal.signal(signal.SIGTERM, self._handle_shutdown)
 
         schedule.every().day.at(research_time).do(self.run_daily_cycle)
+        # Verificar borradores aprobados cada 30 minutos
+        schedule.every(30).minutes.do(self._publish_approved_drafts)
 
         logger.info("Orquestador iniciado. Ciclo diario a las %s", research_time)
+        logger.info("Verificación de borradores aprobados: cada 30 minutos.")
         if self.publisher.dry_run:
             logger.info("Modo DRY RUN activado.")
 
