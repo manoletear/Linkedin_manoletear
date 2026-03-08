@@ -1,0 +1,258 @@
+{
+  "name": "Newsletter Content Assistant - Manuel Aravena",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": ["Newsletter"]
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "a1b2c3d4-0001-0001-0001-000000000001",
+      "name": "Gmail - Newsletter Label",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [200, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_WITH_GMAIL_CREDENTIAL_ID",
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer y limpiar campos del email Gmail\nconst item = $input.first().json;\n\n// Extraer remitente\nlet fuente = '';\nlet fuente_nombre = '';\ntry {\n  if (item.from && item.from.value && item.from.value.length > 0) {\n    fuente = item.from.value[0].address || '';\n    fuente_nombre = item.from.value[0].name || fuente;\n  } else if (typeof item.from === 'string') {\n    fuente = item.from;\n    fuente_nombre = item.from;\n  }\n} catch(e) {\n  fuente = String(item.from || '');\n  fuente_nombre = fuente;\n}\n\n// Extraer cuerpo del email (preferir texto plano, fallback a snippet)\nlet cuerpo = '';\nif (item.text && item.text.length > 100) {\n  cuerpo = item.text.substring(0, 8000); // Limitar para no exceder tokens\n} else if (item.snippet) {\n  cuerpo = item.snippet;\n} else if (item.textHtml) {\n  // Limpiar HTML básico si no hay texto plano\n  cuerpo = item.textHtml\n    .replace(/<[^>]+>/g, ' ')\n    .replace(/\\s+/g, ' ')\n    .trim()\n    .substring(0, 8000);\n}\n\n// Fecha procesada\nconst fecha_raw = item.date || new Date().toISOString();\nlet fecha_iso = '';\ntry {\n  fecha_iso = new Date(fecha_raw).toISOString().split('T')[0];\n} catch(e) {\n  fecha_iso = new Date().toISOString().split('T')[0];\n}\n\nreturn [{\n  json: {\n    email_id: item.id || item.threadId || 'unknown',\n    fuente: fuente,\n    fuente_nombre: fuente_nombre,\n    subject: item.subject || '(sin asunto)',\n    body_text: cuerpo,\n    fecha_raw: fecha_raw,\n    fecha_iso: fecha_iso,\n    snippet: item.snippet || ''\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0002-0002-0002-000000000002",
+      "name": "Extraer Campos Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cargar el SKILL de Personalidad de Manuel Aravena\n// Este nodo centraliza la personalidad para fácil mantenimiento\n\nconst personalidad = `Eres un asistente de análisis de contenido para Manuel Aravena.\n\n## Quién es Manuel\nEmprendedor chileno. Construye automatizaciones, agentes IA y sistemas ERP para clientes en minería, manufactura y negocios en Chile y Latinoamérica. Trabaja con n8n, HubSpot, Claude API, Supabase y WordPress. Su foco: soluciones que funcionan en producción, no demos.\n\n## Su audiencia en LinkedIn\nGerentes de operaciones, dueños de empresa y profesionales de tecnología en LATAM. Quieren IA pragmática con ROI real.\n\n## Voz de Manuel para LinkedIn\n- Primera persona, directo y sin adornos\n- Conecta noticias con experiencia real de sus clientes industriales\n- Desafía supuestos con datos concretos\n- Estructura: Hook fuerte → contexto → observación desde la trinchera → conclusión accionable → CTA con pregunta\n- Extensión: 150-220 palabras\n- Español latino, máximo 3 emojis, 3-5 hashtags al final\n- NO parafrasea la noticia — aporta su ángulo único\n\n## Scoring para noticias\nEvalúa del 1 al 10 según:\n- Relevancia para sus clientes (industria, minería, automatización, IA): peso 40%\n- Originalidad y valor informativo del contenido: peso 30%\n- Potencial de generar post viral en LinkedIn LATAM: peso 30%`;\n\nconst inputData = $input.first().json;\n\nreturn [{\n  json: {\n    ...inputData,\n    personalidad_skill: personalidad\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0003-0003-0003-000000000003",
+      "name": "Cargar SKILL Personalidad",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"model\": \"claude-sonnet-4-5-20250929\",\n  \"max_tokens\": 1500,\n  \"system\": {{ JSON.stringify($json.personalidad_skill) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Analiza este newsletter y devuelve ÚNICAMENTE un JSON válido (sin markdown, sin texto extra).\\n\\nAsunto: {{ $json.subject }}\\nDe: {{ $json.fuente_nombre }} ({{ $json.fuente }})\\nFecha: {{ $json.fecha_iso }}\\n\\nContenido:\\n{{ $json.body_text }}\\n\\nDevuelve exactamente este JSON:\\n{\\n  \\\"resumen\\\": \\\"2-3 oraciones con la idea central del newsletter\\\",\\n  \\\"score\\\": 7,\\n  \\\"score_razon\\\": \\\"1 oración justificando el puntaje\\\",\\n  \\\"rubro\\\": \\\"Categoría principal\\\",\\n  \\\"fuente_detectada\\\": \\\"Nombre del medio o newsletter\\\",\\n  \\\"linkedin_post\\\": \\\"Post completo de 150-220 palabras con la voz de Manuel\\\",\\n  \\\"hashtags\\\": \\\"#tag1 #tag2 #tag3\\\"\\n}\"\n    }\n  ]\n}"
+      },
+      "id": "a1b2c3d4-0004-0004-0004-000000000004",
+      "name": "Analizar con Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear respuesta de Claude y preparar fila para Google Sheets\nconst claudeResponse = $input.first().json;\nconst emailData = $('Extraer Campos Email').first().json;\n\n// Extraer texto de la respuesta\nlet rawText = '';\ntry {\n  rawText = claudeResponse.content[0].text;\n} catch(e) {\n  throw new Error('Error al leer respuesta de Claude: ' + JSON.stringify(claudeResponse));\n}\n\n// Parsear JSON - manejar casos donde Claude agrega markdown\nlet analysis;\ntry {\n  // Intento directo\n  analysis = JSON.parse(rawText);\n} catch(e1) {\n  try {\n    // Extraer de bloque ```json ... ```\n    const match = rawText.match(/```(?:json)?\\n?([\\s\\S]*?)\\n?```/);\n    if (match) {\n      analysis = JSON.parse(match[1]);\n    } else {\n      // Buscar el JSON por llaves\n      const jsonMatch = rawText.match(/\\{[\\s\\S]*\\}/);\n      if (jsonMatch) {\n        analysis = JSON.parse(jsonMatch[0]);\n      } else {\n        throw new Error('No JSON found');\n      }\n    }\n  } catch(e2) {\n    throw new Error('No se pudo parsear respuesta Claude: ' + rawText.substring(0, 200));\n  }\n}\n\n// Generar ID único para la noticia\nconst dateStr = emailData.fecha_iso.replace(/-/g, '');\nconst fuenteSlug = (analysis.fuente_detectada || emailData.fuente_nombre || emailData.fuente)\n  .toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') // quitar tildes\n  .replace(/[^a-z0-9]/g, '')\n  .substring(0, 8);\nconst timestamp36 = Date.now().toString(36).toUpperCase();\nconst id_noticia = `NEW-${dateStr}-${fuenteSlug}-${timestamp36}`;\n\n// Score como número\nconst score = parseInt(analysis.score) || 0;\n\nreturn [{\n  json: {\n    id_noticia: id_noticia,\n    fuente: analysis.fuente_detectada || emailData.fuente_nombre || emailData.fuente,\n    email_origen: emailData.fuente,\n    asunto_original: emailData.subject,\n    fecha: emailData.fecha_iso,\n    resumen: analysis.resumen || '',\n    score: score,\n    score_razon: analysis.score_razon || '',\n    rubro: analysis.rubro || '',\n    sugerencia_linkedin: (analysis.linkedin_post || '') + '\\n\\n' + (analysis.hashtags || ''),\n    email_id_gmail: emailData.email_id\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0005-0005-0005-000000000005",
+      "name": "Procesar y Generar ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1160, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "mode": "id",
+          "value": "REEMPLAZAR_CON_TU_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "mode": "name",
+          "value": "Newsletter"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Noticia": "={{ $json.id_noticia }}",
+            "Fuente": "={{ $json.fuente }}",
+            "Asunto Original": "={{ $json.asunto_original }}",
+            "Fecha": "={{ $json.fecha }}",
+            "Resumen": "={{ $json.resumen }}",
+            "Score": "={{ $json.score }}",
+            "Por qué ese Score": "={{ $json.score_razon }}",
+            "Rubro": "={{ $json.rubro }}",
+            "Sugerencia Post LinkedIn": "={{ $json.sugerencia_linkedin }}",
+            "Gmail ID": "={{ $json.email_id_gmail }}"
+          }
+        },
+        "options": {
+          "valueInputMode": "USER_ENTERED"
+        }
+      },
+      "id": "a1b2c3d4-0006-0006-0006-000000000006",
+      "name": "Google Sheets - Agregar Fila",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1400, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log de éxito con metadata\nconst data = $input.first().json;\nconsole.log(`✅ Newsletter procesado: ${data.id_noticia} | Score: ${data.score}/10 | Rubro: ${data.rubro}`);\nreturn $input.all();"
+      },
+      "id": "a1b2c3d4-0007-0007-0007-000000000007",
+      "name": "Log Éxito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 300]
+    },
+    {
+      "parameters": {},
+      "id": "a1b2c3d4-0008-0008-0008-000000000008",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [200, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capturar error y notificar\nconst error = $input.first().json;\nconsole.error('❌ Error en Newsletter Assistant:', JSON.stringify(error));\n\nreturn [{\n  json: {\n    error: true,\n    mensaje: error.message || 'Error desconocido',\n    workflow: error.execution?.workflowName || 'Newsletter Content Assistant',\n    nodo: error.node?.name || 'Desconocido',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "a1b2c3d4-0009-0009-0009-000000000009",
+      "name": "Capturar Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 520]
+    }
+  ],
+  "connections": {
+    "Gmail - Newsletter Label": {
+      "main": [
+        [
+          {
+            "node": "Extraer Campos Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Campos Email": {
+      "main": [
+        [
+          {
+            "node": "Cargar SKILL Personalidad",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cargar SKILL Personalidad": {
+      "main": [
+        [
+          {
+            "node": "Analizar con Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analizar con Claude API": {
+      "main": [
+        [
+          {
+            "node": "Procesar y Generar ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar y Generar ID": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Agregar Fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Agregar Fila": {
+      "main": [
+        [
+          {
+            "node": "Log Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Capturar Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "newsletter-content-assistant-v1"
+  },
+  "pinData": {},
+  "versionId": "1.0.0",
+  "tags": ["newsletter", "content", "linkedin", "automation"]
+}
