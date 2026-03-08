@@ -1,3 +1,4 @@
 __pycache__/
 *.pyc
 agents/ai_news_scraper/output/
+agents/news_writer/output/
