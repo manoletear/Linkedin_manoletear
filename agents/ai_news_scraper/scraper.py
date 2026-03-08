@@ -31,6 +31,7 @@ from .config import (
     OUTPUT_DIR,
     OUTPUT_FORMAT,
 )
+from ..claude_client import ask_claude_json
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -61,7 +62,13 @@ class Article:
 class AINewsScraper:
     """Agente principal de scraping de noticias IA empresarial."""
 
-    def __init__(self):
+    def __init__(self, use_ai: bool = False):
+        """
+        Args:
+            use_ai: Si True, usa Claude para analizar relevancia.
+                    Si False, usa scoring por keywords (original).
+        """
+        self.use_ai = use_ai
         self.articles: list[Article] = []
         self.seen_urls: set[str] = set()
         output_path = os.path.join(os.path.dirname(__file__), OUTPUT_DIR)
@@ -73,7 +80,12 @@ class AINewsScraper:
         logger.info("Iniciando scraping de noticias IA empresarial...")
 
         self._scrape_rss_feeds()
-        self._score_articles()
+
+        if self.use_ai:
+            self._score_articles_with_claude()
+        else:
+            self._score_articles()
+
         self._filter_and_rank()
 
         results = [a.to_dict() for a in self.articles]
@@ -158,6 +170,90 @@ class AINewsScraper:
 
             article.relevance_score = min(score, 100)
             article.matched_keywords = matched
+
+    def _score_articles_with_claude(self):
+        """Usa Claude para evaluar relevancia de los artículos en lotes."""
+        if not self.articles:
+            return
+
+        logger.info("Evaluando %d artículos con Claude...", len(self.articles))
+
+        # Procesar en lotes de 10 para no exceder contexto
+        batch_size = 10
+        for i in range(0, len(self.articles), batch_size):
+            batch = self.articles[i:i + batch_size]
+            summaries = [
+                {
+                    "index": j,
+                    "title": a.title,
+                    "summary": a.summary[:300],
+                    "source": a.source,
+                }
+                for j, a in enumerate(batch)
+            ]
+
+            prompt = f"""Analiza estos artículos y evalúa su relevancia para un profesional
+que lidera la adopción estratégica de IA en empresas.
+
+Criterios de puntuación (0-100):
+- Relevancia para estrategia empresarial de IA: 0-30 pts
+- Aplicabilidad práctica (casos de uso, deployment, ROI): 0-25 pts
+- Novedad e impacto del contenido: 0-20 pts
+- Relación con adopción sin fricción / arquitectura organizacional: 0-25 pts
+
+Artículos:
+{json.dumps(summaries, ensure_ascii=False)}
+
+Responde con un JSON array. Para cada artículo:
+{{"index": N, "score": 0-100, "keywords": ["keyword1", "keyword2"], "reason": "frase breve"}}"""
+
+            try:
+                results = ask_claude_json(
+                    prompt,
+                    system=(
+                        "Eres un analista experto en IA empresarial. "
+                        "Evalúas noticias por su relevancia estratégica."
+                    ),
+                )
+                if isinstance(results, list):
+                    for item in results:
+                        idx = item.get("index", -1)
+                        if 0 <= idx < len(batch):
+                            batch[idx].relevance_score = min(item.get("score", 0), 100)
+                            batch[idx].matched_keywords = item.get("keywords", [])
+
+                logger.info(
+                    "Lote %d-%d evaluado con Claude.", i + 1, i + len(batch),
+                )
+            except Exception as e:
+                logger.warning(
+                    "Error en scoring con Claude (lote %d): %s. Usando keywords.",
+                    i, e,
+                )
+                # Fallback a scoring por keywords para este lote
+                for article in batch:
+                    self._score_single_article(article)
+
+    def _score_single_article(self, article: Article):
+        """Scoring por keywords para un solo artículo (fallback)."""
+        score = 0
+        text = f"{article.title} {article.summary}".lower()
+        matched = []
+        for kw in KEYWORDS_PRIMARY:
+            if kw.lower() in text:
+                score += 15
+                matched.append(kw)
+        for kw in KEYWORDS_ENTERPRISE:
+            if kw.lower() in text:
+                score += 10
+                matched.append(kw)
+        title_lower = article.title.lower()
+        if any(k in title_lower for k in ["enterprise", "empresarial", "strategy", "estrategia"]):
+            score += 20
+        if any(k in title_lower for k in ["frictionless", "sin fricción", "seamless"]):
+            score += 15
+        article.relevance_score = min(score, 100)
+        article.matched_keywords = matched
 
     def _filter_and_rank(self):
         """Filtra por umbral de relevancia y ordena por puntuación."""

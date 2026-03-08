@@ -6,9 +6,10 @@ Ejecuta ambos agentes en secuencia:
 2. Las transforma en contenido publicable
 
 Uso:
-    python pipeline.py                          # LinkedIn (default)
-    python pipeline.py --format blog            # Blog
-    python pipeline.py --format newsletter      # Newsletter
+    python pipeline.py                          # LinkedIn (plantillas)
+    python pipeline.py --format blog            # Blog (plantillas)
+    python pipeline.py --ai                     # LinkedIn con Claude
+    python pipeline.py --ai --format newsletter # Newsletter con Claude
 """
 
 import argparse
@@ -24,10 +25,14 @@ def main():
         choices=["linkedin", "blog", "newsletter"],
         default="linkedin",
     )
+    parser.add_argument(
+        "--ai", action="store_true",
+        help="Usar Claude para scoring y redacción (requiere ANTHROPIC_API_KEY)",
+    )
     args = parser.parse_args()
 
     # Paso 1: Scraping
-    scraper = AINewsScraper()
+    scraper = AINewsScraper(use_ai=args.ai)
     articles = scraper.run()
 
     if not articles:
@@ -35,10 +40,11 @@ def main():
         return
 
     # Paso 2: Redacción
-    writer = NewsWriter(output_format=args.format)
+    writer = NewsWriter(output_format=args.format, use_ai=args.ai)
     results = writer.run(articles)
 
-    print(f"\nPipeline completado: {len(articles)} artículos → {len(results)} pieza(s) [{args.format}]")
+    mode = "Claude" if args.ai else "plantillas"
+    print(f"\nPipeline completado ({mode}): {len(articles)} artículos → {len(results)} pieza(s) [{args.format}]")
 
 
 if __name__ == "__main__":

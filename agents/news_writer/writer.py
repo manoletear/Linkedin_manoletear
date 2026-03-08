@@ -3,6 +3,10 @@ Agente redactor de noticias sobre IA empresarial.
 
 Toma los artículos recopilados por el scraper y los transforma en
 contenido editorial publicable en LinkedIn, blog o newsletter.
+
+Soporta dos modos:
+- use_ai=True:  Claude redacta contenido original (requiere ANTHROPIC_API_KEY)
+- use_ai=False: Usa plantillas estáticas (sin dependencias externas)
 """
 
 import json
@@ -34,12 +38,51 @@ from .templates import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+# ── System prompts para Claude ────────────────────────────────────────────
+
+SYSTEM_LINKEDIN = """Eres un redactor experto en contenido para LinkedIn sobre IA empresarial.
+Tu voz es {voice}. Escribes en {lang}.
+
+Reglas:
+- Máximo {max_chars} caracteres
+- Estructura: titular impactante → hook que enganche → cuerpo con análisis → takeaway → CTA → hashtags
+- No uses emojis salvo que se indique
+- Tono: profesional pero accesible, con insights estratégicos
+- Enfócate en el impacto empresarial, no en lo técnico
+- Incluye exactamente {hashtag_count} hashtags relevantes al final
+- El CTA debe ser una {cta_style} que invite a la conversación"""
+
+SYSTEM_BLOG = """Eres un redactor experto en artículos de blog sobre IA empresarial.
+Tu voz es {voice}. Escribes en {lang}.
+
+Reglas:
+- Entre {min_words} y {max_words} palabras
+- Estructura: título → subtítulo → contexto → análisis → por qué importa → conclusión → fuentes
+- Tono analítico pero accesible para directivos y líderes de negocio
+- Incluye datos concretos y perspectiva estratégica
+- Cita la fuente original"""
+
+SYSTEM_NEWSLETTER = """Eres un editor de newsletters sobre IA empresarial.
+Tu voz es {voice}. Escribes en {lang}.
+
+Reglas:
+- Estilo: {style}
+- Cada artículo: resumen de 2-3 frases + "Por qué importa" en 1-2 frases
+- Incluye un TL;DR al inicio con lo más destacado
+- Tono ejecutivo y directo, para lectores con poco tiempo"""
+
 
 class NewsWriter:
     """Transforma artículos scrapeados en contenido editorial."""
 
-    def __init__(self, output_format: str = DEFAULT_FORMAT):
+    def __init__(self, output_format: str = DEFAULT_FORMAT, use_ai: bool = False):
+        """
+        Args:
+            output_format: 'linkedin', 'blog' o 'newsletter'.
+            use_ai: Si True, usa Claude para redactar. Si False, plantillas.
+        """
         self.format = output_format
+        self.use_ai = use_ai
         output_path = os.path.join(os.path.dirname(__file__), OUTPUT_DIR)
         os.makedirs(output_path, exist_ok=True)
         self.output_path = output_path
@@ -50,9 +93,10 @@ class NewsWriter:
             logger.warning("No hay artículos para redactar.")
             return []
 
+        mode = "Claude" if self.use_ai else "plantillas"
         logger.info(
-            "Redactando %d artículo(s) en formato '%s'...",
-            len(articles), self.format,
+            "Redactando %d artículo(s) en formato '%s' [%s]...",
+            len(articles), self.format, mode,
         )
 
         dispatch = {
@@ -66,16 +110,57 @@ class NewsWriter:
         self._save_results(results)
         return results
 
-    # ── LinkedIn ─────────────────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════════
+    #  LINKEDIN
+    # ══════════════════════════════════════════════════════════════════════
 
     def _write_linkedin(self, articles: list[dict]) -> list[str]:
         posts = []
         for article in articles:
-            post = self._compose_linkedin_post(article)
+            if self.use_ai:
+                post = self._compose_linkedin_with_claude(article)
+            else:
+                post = self._compose_linkedin_post(article)
             if post:
                 posts.append(post)
         logger.info("LinkedIn: %d posts generados.", len(posts))
         return posts
+
+    def _compose_linkedin_with_claude(self, article: dict) -> str:
+        """Usa Claude para redactar un post de LinkedIn original."""
+        from ..claude_client import ask_claude
+
+        system = SYSTEM_LINKEDIN.format(
+            voice=AUTHOR_VOICE,
+            lang="español" if LANGUAGE == "es" else "English",
+            max_chars=LINKEDIN_CONFIG["max_chars"],
+            hashtag_count=LINKEDIN_CONFIG["hashtag_count"],
+            cta_style=LINKEDIN_CONFIG["cta_style"],
+        )
+
+        prompt = f"""Redacta un post de LinkedIn basado en esta noticia:
+
+**Título:** {article.get('title', '')}
+**Fuente:** {article.get('source', '')}
+**Resumen:** {article.get('summary', '')}
+**Keywords:** {', '.join(article.get('matched_keywords', []))}
+**URL:** {article.get('url', '')}
+
+Ángulos editoriales sugeridos:
+{chr(10).join(f'- {a}' for a in EDITORIAL_ANGLES)}
+
+Escribe SOLO el post, listo para copiar y pegar en LinkedIn. Sin instrucciones ni metadatos."""
+
+        try:
+            post = ask_claude(prompt, system=system, max_tokens=1500, temperature=0.8)
+            # Respetar límite de caracteres
+            max_chars = LINKEDIN_CONFIG["max_chars"]
+            if len(post) > max_chars:
+                post = post[:max_chars - 3] + "..."
+            return post
+        except Exception as e:
+            logger.warning("Error con Claude en LinkedIn: %s. Usando plantilla.", e)
+            return self._compose_linkedin_post(article)
 
     def _compose_linkedin_post(self, article: dict) -> str:
         title = article.get("title", "")
@@ -102,12 +187,172 @@ class NewsWriter:
             hashtags=hashtags,
         )
 
-        # Respetar límite de caracteres de LinkedIn
         max_chars = LINKEDIN_CONFIG["max_chars"]
         if len(post) > max_chars:
             post = post[:max_chars - 3] + "..."
 
         return post
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  BLOG
+    # ══════════════════════════════════════════════════════════════════════
+
+    def _write_blog(self, articles: list[dict]) -> list[str]:
+        posts = []
+        for article in articles:
+            if self.use_ai:
+                post = self._compose_blog_with_claude(article)
+            else:
+                post = self._compose_blog_post(article)
+            if post:
+                posts.append(post)
+        logger.info("Blog: %d artículos generados.", len(posts))
+        return posts
+
+    def _compose_blog_with_claude(self, article: dict) -> str:
+        """Usa Claude para redactar un artículo de blog."""
+        from ..claude_client import ask_claude
+
+        system = SYSTEM_BLOG.format(
+            voice=AUTHOR_VOICE,
+            lang="español" if LANGUAGE == "es" else "English",
+            min_words=BLOG_CONFIG["min_words"],
+            max_words=BLOG_CONFIG["max_words"],
+        )
+
+        prompt = f"""Redacta un artículo de blog basado en esta noticia:
+
+**Título:** {article.get('title', '')}
+**Fuente:** {article.get('source', '')}
+**URL:** {article.get('url', '')}
+**Resumen:** {article.get('summary', '')}
+**Keywords:** {', '.join(article.get('matched_keywords', []))}
+
+Usa formato Markdown. Incluye la fuente original al final.
+Escribe SOLO el artículo, sin instrucciones ni metadatos."""
+
+        try:
+            return ask_claude(prompt, system=system, max_tokens=3000, temperature=0.7)
+        except Exception as e:
+            logger.warning("Error con Claude en Blog: %s. Usando plantilla.", e)
+            return self._compose_blog_post(article)
+
+    def _compose_blog_post(self, article: dict) -> str:
+        title = article.get("title", "")
+        summary = article.get("summary", "")
+        keywords = article.get("matched_keywords", [])
+        source = article.get("source", "")
+        url = article.get("url", "")
+
+        subtitle = self._pick_editorial_angle(keywords)
+        introduction = self._rewrite_summary(summary)
+        body = self._build_body(summary, keywords, url, source)
+        analysis = self._build_takeaway(keywords)
+        conclusion = (
+            "La pregunta ya no es si adoptar IA, sino cómo hacerlo "
+            "de forma que potencie la estructura existente en lugar de disrumpirla. "
+            "Las empresas que resuelvan esta ecuación liderarán su sector."
+        )
+        sources = f"[{source}]({url})"
+
+        return BLOG_TEMPLATE.format(
+            title=title,
+            subtitle=subtitle,
+            introduction=introduction,
+            body=body,
+            analysis=analysis,
+            conclusion=conclusion,
+            sources=sources,
+        )
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  NEWSLETTER
+    # ══════════════════════════════════════════════════════════════════════
+
+    def _write_newsletter(self, articles: list[dict]) -> list[str]:
+        max_items = NEWSLETTER_CONFIG["max_articles"]
+        selected = articles[:max_items]
+
+        if self.use_ai:
+            return [self._compose_newsletter_with_claude(selected)]
+
+        items_text = []
+        for i, article in enumerate(selected, 1):
+            keywords = article.get("matched_keywords", [])
+            item = NEWSLETTER_ITEM_TEMPLATE.format(
+                number=i,
+                title=article.get("title", ""),
+                summary=self._rewrite_summary(article.get("summary", "")),
+                why_it_matters=self._build_takeaway(keywords),
+                url=article.get("url", ""),
+                source=article.get("source", ""),
+            )
+            items_text.append(item)
+
+        tldr = ""
+        if NEWSLETTER_CONFIG["include_tldr"]:
+            tldr = "**TL;DR:** " + "; ".join(
+                a.get("title", "")[:60] for a in selected
+            ) + "."
+
+        newsletter = NEWSLETTER_TEMPLATE.format(
+            date=datetime.now().strftime("%d/%m/%Y"),
+            tldr=tldr,
+            articles_section="\n".join(items_text),
+        )
+
+        logger.info("Newsletter: 1 briefing con %d artículos.", len(selected))
+        return [newsletter]
+
+    def _compose_newsletter_with_claude(self, articles: list[dict]) -> str:
+        """Usa Claude para redactar un briefing de newsletter completo."""
+        from ..claude_client import ask_claude
+
+        system = SYSTEM_NEWSLETTER.format(
+            voice=AUTHOR_VOICE,
+            lang="español" if LANGUAGE == "es" else "English",
+            style=NEWSLETTER_CONFIG["style"],
+        )
+
+        articles_data = json.dumps(
+            [
+                {
+                    "title": a.get("title", ""),
+                    "source": a.get("source", ""),
+                    "url": a.get("url", ""),
+                    "summary": a.get("summary", ""),
+                    "keywords": a.get("matched_keywords", []),
+                }
+                for a in articles
+            ],
+            ensure_ascii=False,
+        )
+
+        today = datetime.now().strftime("%d/%m/%Y")
+        prompt = f"""Redacta un briefing de newsletter con fecha {today} basado en estos artículos:
+
+{articles_data}
+
+Estructura:
+1. Título: "Briefing IA Empresarial — {today}"
+2. TL;DR con lo más destacado (2-3 frases)
+3. Para cada artículo: resumen + "Por qué importa" + link a fuente
+4. Cierre editorial
+
+Usa formato Markdown. Escribe SOLO el newsletter."""
+
+        try:
+            newsletter = ask_claude(prompt, system=system, max_tokens=4000, temperature=0.7)
+            logger.info("Newsletter: 1 briefing con %d artículos (Claude).", len(articles))
+            return newsletter
+        except Exception as e:
+            logger.warning("Error con Claude en Newsletter: %s. Usando plantilla.", e)
+            # Fallback a plantilla
+            return self._write_newsletter.__wrapped__(self, articles)[0] if hasattr(self._write_newsletter, '__wrapped__') else ""
+
+    # ══════════════════════════════════════════════════════════════════════
+    #  HELPERS (plantillas estáticas — fallback)
+    # ══════════════════════════════════════════════════════════════════════
 
     def _build_headline(self, title: str) -> str:
         if len(title) > 80:
@@ -133,8 +378,8 @@ class NewsWriter:
             )
 
         return (
-            f"Un desarrollo relevante en el mundo de la IA que merece "
-            f"atención desde la perspectiva empresarial."
+            "Un desarrollo relevante en el mundo de la IA que merece "
+            "atención desde la perspectiva empresarial."
         )
 
     def _build_body(
@@ -142,16 +387,13 @@ class NewsWriter:
     ) -> str:
         paragraphs = []
 
-        # Contexto
         if summary:
             context = self._rewrite_summary(summary)
             paragraphs.append(context)
 
-        # Análisis estratégico
         angle = self._pick_editorial_angle(keywords)
         paragraphs.append(angle)
 
-        # Referencia a fuente
         paragraphs.append(
             f"Según {source}, esta tendencia está ganando tracción "
             f"en organizaciones que priorizan la adopción sin fricción."
@@ -179,7 +421,6 @@ class NewsWriter:
         )
 
     def _rewrite_summary(self, summary: str) -> str:
-        """Reescribe el resumen en tono editorial."""
         sentences = summary.split(". ")
         if len(sentences) > 3:
             sentences = sentences[:3]
@@ -220,79 +461,6 @@ class NewsWriter:
         base = list(LINKEDIN_CONFIG["default_hashtags"])
         all_tags = dynamic + [t for t in base if t not in dynamic]
         return all_tags[:count]
-
-    # ── Blog ─────────────────────────────────────────────────────────────
-
-    def _write_blog(self, articles: list[dict]) -> list[str]:
-        posts = []
-        for article in articles:
-            post = self._compose_blog_post(article)
-            if post:
-                posts.append(post)
-        logger.info("Blog: %d artículos generados.", len(posts))
-        return posts
-
-    def _compose_blog_post(self, article: dict) -> str:
-        title = article.get("title", "")
-        summary = article.get("summary", "")
-        keywords = article.get("matched_keywords", [])
-        source = article.get("source", "")
-        url = article.get("url", "")
-
-        subtitle = self._pick_editorial_angle(keywords)
-        introduction = self._rewrite_summary(summary)
-        body = self._build_body(summary, keywords, url, source)
-        analysis = self._build_takeaway(keywords)
-        conclusion = (
-            "La pregunta ya no es si adoptar IA, sino cómo hacerlo "
-            "de forma que potencie la estructura existente en lugar de disrumpirla. "
-            "Las empresas que resuelvan esta ecuación liderarán su sector."
-        )
-        sources = f"[{source}]({url})"
-
-        return BLOG_TEMPLATE.format(
-            title=title,
-            subtitle=subtitle,
-            introduction=introduction,
-            body=body,
-            analysis=analysis,
-            conclusion=conclusion,
-            sources=sources,
-        )
-
-    # ── Newsletter ───────────────────────────────────────────────────────
-
-    def _write_newsletter(self, articles: list[dict]) -> list[str]:
-        max_items = NEWSLETTER_CONFIG["max_articles"]
-        selected = articles[:max_items]
-
-        items_text = []
-        for i, article in enumerate(selected, 1):
-            keywords = article.get("matched_keywords", [])
-            item = NEWSLETTER_ITEM_TEMPLATE.format(
-                number=i,
-                title=article.get("title", ""),
-                summary=self._rewrite_summary(article.get("summary", "")),
-                why_it_matters=self._build_takeaway(keywords),
-                url=article.get("url", ""),
-                source=article.get("source", ""),
-            )
-            items_text.append(item)
-
-        tldr = ""
-        if NEWSLETTER_CONFIG["include_tldr"]:
-            tldr = "**TL;DR:** " + "; ".join(
-                a.get("title", "")[:60] for a in selected
-            ) + "."
-
-        newsletter = NEWSLETTER_TEMPLATE.format(
-            date=datetime.now().strftime("%d/%m/%Y"),
-            tldr=tldr,
-            articles_section="\n".join(items_text),
-        )
-
-        logger.info("Newsletter: 1 briefing con %d artículos.", len(selected))
-        return [newsletter]
 
     # ── Persistencia ─────────────────────────────────────────────────────
 
@@ -349,6 +517,10 @@ def main():
         default=None,
         help="Ruta a JSON de artículos (default: último output del scraper)",
     )
+    parser.add_argument(
+        "--ai", action="store_true",
+        help="Usar Claude para redactar (requiere ANTHROPIC_API_KEY)",
+    )
     args = parser.parse_args()
 
     articles = load_scraper_output(args.input)
@@ -357,7 +529,7 @@ def main():
         print("  python -m agents.ai_news_scraper")
         return
 
-    writer = NewsWriter(output_format=args.format)
+    writer = NewsWriter(output_format=args.format, use_ai=args.ai)
     results = writer.run(articles)
 
     print(f"\n{'='*60}")
