@@ -1,253 +1,136 @@
-# Setup: LinkedIn Profile Enrichment
-## Google Sheets ↔ Proxycurl ↔ Claude API ↔ Google Sheets
+# Setup: LinkedIn Profile Enrichment Agent
+## Google Sheets ↔ Proxycurl ↔ Claude API
+
+Sistema de agentes en Python que enriquece perfiles LinkedIn desde tu Google Sheet, completando las columnas **Industria**, **Pais** y **Poder de Desicion**.
 
 ---
 
-## Arquitectura del flujo
+## Arquitectura (simula flujo n8n con scripts)
 
 ```
-Schedule Trigger (cada 5 min)
-    → Google Sheets - Leer Perfiles         [Lee todas las filas]
-    → Filtrar Pendientes (1 a la vez)       [Code - solo sin resumen]
-    → Proxycurl - Obtener Perfil LinkedIn   [HTTP Request → API]
-    → Preparar Contexto para Claude         [Code - estructura datos]
-    → Claude API - Generar Resumen          [HTTP Request → Anthropic]
-    → Procesar Respuesta Claude             [Code - parsea JSON + ID]
-    → Google Sheets - Actualizar Fila       [Google Sheets update]
-    → Log Éxito
-
-Error Trigger → Capturar Error
+run.py (orquestador)
+    → sheets_agent.py    → Lee Google Sheet, filtra pendientes
+    → proxycurl_agent.py → Obtiene datos del perfil LinkedIn
+    → claude_agent.py    → Clasifica: Industria, Pais, Poder de Desicion
+    → sheets_agent.py    → Actualiza la fila en Google Sheet
 ```
+
+---
+
+## Google Sheet conectada
+
+- **ID**: `1KvYX2O4XBmNEshfCljQoq3dU0gk91Px-DPB2LX_4aqM`
+- **GID**: `624242335`
+- **Columnas**: First Name | Last Name | URL | Email Address | Company | Position | Connected On | **Industria** | **Pais** | **Poder de Desicion**
 
 ---
 
 ## Pre-requisitos
 
-- n8n (self-hosted o cloud)
-- Cuenta Google con Sheets activados
+- Python 3.10+
 - API Key de Anthropic (Claude)
-- API Key de Proxycurl (https://nubela.co/proxycurl) — plan gratuito incluye 5 créditos/mes
-- Google Sheet creado con las columnas correctas
+- API Key de Proxycurl (opcional, mejora la calidad)
+- Google Service Account con acceso a la Sheet
 
 ---
 
-## Paso 1: Crear la Google Sheet
+## Paso 1: Instalar dependencias
 
-Crea una hoja nueva en Google Sheets con el nombre de pestaña: **LinkedIn**
-
-Columnas en fila 1 (exactas):
-
-| A | B | C | D | E | F | G | H | I | J | K | L | M | N | O | P |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| URL LinkedIn | Nombre Completo | Cargo Actual | Empresa Actual | Industria | Rubro | Ubicación | Años Experiencia | Resumen | Habilidades Clave | Nivel Decisión | Potencial Contacto | Tema Conversación | Fecha Enriquecimiento | Estado | ID Enriquecimiento |
-
-### Llenar la columna A
-
-Pega tus URLs de LinkedIn en la columna **URL LinkedIn**, una por fila:
-```
-https://www.linkedin.com/in/paulina-contreras-hernandez/
-https://www.linkedin.com/in/otro-perfil/
-...
-```
-
-El flujo procesará **uno por uno** los perfiles que no tengan la columna "Estado" en "Completado".
-
-Copia el **ID del Sheet** desde la URL:
-`https://docs.google.com/spreadsheets/d/**ESTE_ES_EL_ID**/edit`
-
----
-
-## Paso 2: Obtener API Key de Proxycurl
-
-1. Registrarse en https://nubela.co/proxycurl
-2. Plan gratuito: 5 créditos/mes (1 crédito = 1 perfil)
-3. Plan de pago: desde $49/mes para 500 créditos
-4. Copiar tu API Key desde el dashboard
-
-### Alternativa sin Proxycurl
-
-Si no quieres usar Proxycurl, el workflow incluye un nodo alternativo deshabilitado (**"Alternativa - Búsqueda Web"**) que extrae datos básicos del nombre de usuario del URL. Para usarlo:
-
-1. Deshabilita el nodo "Proxycurl - Obtener Perfil LinkedIn"
-2. Habilita el nodo "Alternativa - Búsqueda Web (sin API)"
-3. Reconecta las conexiones en el canvas
-
-> Nota: La alternativa web dará datos muy limitados. Proxycurl es la opción recomendada.
-
----
-
-## Paso 3: Configurar credenciales en n8n
-
-### Google Sheets OAuth2
-1. n8n → Credentials → New → Google Sheets OAuth2
-2. Autorizar con tu cuenta Google
-3. Anotar el ID de la credencial
-
-### Proxycurl API Key
-1. n8n → Credentials → New → Header Auth
-2. Name: `Authorization`
-3. Value: `Bearer TU_PROXYCURL_API_KEY`
-
-### Anthropic API Key
-Opción A — Variable de entorno (recomendada):
 ```bash
-# En tu .env de n8n o docker-compose:
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Opción B — Header directo en el nodo HTTP Request:
-- Abre el nodo "Claude API - Generar Resumen"
-- En Headers, reemplaza `{{ $env.ANTHROPIC_API_KEY }}` por tu key directa
-
----
-
-## Paso 4: Importar el workflow
-
-1. n8n → Workflows → Import from file
-2. Selecciona `linkedin_enrichment_workflow.json`
-3. El workflow se crea desactivado
-
----
-
-## Paso 5: Configurar el workflow importado
-
-### Nodo: Google Sheets - Leer Perfiles
-- Reemplazar `REEMPLAZAR_CON_TU_GOOGLE_SHEET_ID` con el ID real de tu Sheet
-- Asignar la credencial Google Sheets OAuth2
-- Verificar que el nombre de la pestaña sea `LinkedIn`
-
-### Nodo: Google Sheets - Actualizar Fila
-- Mismo Sheet ID que el anterior
-- Misma credencial
-
-### Nodo: Proxycurl - Obtener Perfil LinkedIn
-- Asignar la credencial Header Auth con tu API Key de Proxycurl
-
-### Nodo: Claude API - Generar Resumen
-- Verificar que `ANTHROPIC_API_KEY` esté configurada como variable de entorno
-- O reemplazar con tu key directa en el header
-
----
-
-## Paso 6: Activar el workflow
-
-1. Ejecutar manualmente primero con un perfil de prueba
-2. Verificar que la fila se actualice en Google Sheets con todos los campos
-3. Activar el workflow (toggle en la esquina superior derecha)
-
----
-
-## Datos que se enriquecen por perfil
-
-| Campo | Descripción |
-|-------|-------------|
-| Nombre Completo | Nombre real del perfil |
-| Cargo Actual | Titular/headline de LinkedIn |
-| Empresa Actual | Empresa donde trabaja hoy |
-| Industria | Sector principal (Tecnología, Minería, etc.) |
-| Rubro | Rubro específico del negocio |
-| Ubicación | Ciudad y país |
-| Años Experiencia | Estimación basada en trayectoria |
-| Resumen | Resumen profesional de 3-4 líneas generado por Claude |
-| Habilidades Clave | Top skills relevantes |
-| Nivel Decisión | C-Level / Director / Gerente / Coordinador / Especialista |
-| Potencial Contacto | Alto / Medio / Bajo — relevancia para automatización e IA |
-| Tema Conversación | Sugerencia de tema para primer contacto |
-| Fecha Enriquecimiento | Fecha en que se procesó |
-| Estado | Completado / Pendiente |
-
----
-
-## Flujo visual
-
-```
-┌─────────────┐    ┌──────────────┐    ┌────────────────┐
-│  Schedule    │───▶│ Google Sheet  │───▶│ Filtrar 1      │
-│  (5 min)     │    │ Leer Filas   │    │ Pendiente      │
-└─────────────┘    └──────────────┘    └───────┬────────┘
-                                               │
-                                               ▼
-                                    ┌──────────────────┐
-                                    │ Proxycurl API    │
-                                    │ Obtener Perfil   │
-                                    └───────┬──────────┘
-                                            │
-                                            ▼
-                                    ┌──────────────────┐
-                                    │ Preparar Contexto│
-                                    │ para Claude      │
-                                    └───────┬──────────┘
-                                            │
-                                            ▼
-                                    ┌──────────────────┐
-                                    │ Claude API       │
-                                    │ Generar Resumen  │
-                                    └───────┬──────────┘
-                                            │
-                                            ▼
-                                    ┌──────────────────┐
-                                    │ Procesar JSON    │
-                                    │ Respuesta Claude │
-                                    └───────┬──────────┘
-                                            │
-                                            ▼
-                                    ┌──────────────────┐    ┌──────────┐
-                                    │ Google Sheet     │───▶│ Log      │
-                                    │ Actualizar Fila  │    │ Éxito    │
-                                    └──────────────────┘    └──────────┘
+cd linkedin_enrichment
+pip install -r requirements.txt
 ```
 
 ---
 
-## Ajustes frecuentes
+## Paso 2: Configurar Google Service Account
 
-**Cambiar frecuencia de procesamiento:**
-En Schedule Trigger → cambiar `minutesInterval` de 5 a lo que necesites.
+1. Ir a [Google Cloud Console](https://console.cloud.google.com/)
+2. Crear proyecto (o usar uno existente)
+3. Habilitar **Google Sheets API** y **Google Drive API**
+4. Crear **Service Account** → generar JSON key
+5. Guardar el JSON como `linkedin_enrichment/google_credentials.json`
+6. Compartir tu Google Sheet con el email del Service Account (el que termina en `@*.iam.gserviceaccount.com`)
 
-**Cambiar modelo de Claude:**
-En nodo HTTP Request "Claude API", campo `model`:
-- `claude-sonnet-4-5-20250929` (recomendado, balance calidad/costo)
-- `claude-haiku-4-5-20251001` (más rápido y barato)
+---
 
-**Procesar más de 1 perfil por ejecución:**
-En nodo "Filtrar Pendientes", cambiar:
-```javascript
-// De: return [pendientes[0]];
-// A:  return pendientes.slice(0, 3); // procesa 3 a la vez
+## Paso 3: Configurar API Keys
+
+```bash
+cp .env.example .env
 ```
-> Cuidado con rate limits de Proxycurl y Claude API.
+
+Editar `.env`:
+```
+ANTHROPIC_API_KEY=sk-ant-tu-key-aqui
+PROXYCURL_API_KEY=tu-proxycurl-key  # opcional
+```
+
+---
+
+## Paso 4: Ejecutar
+
+```bash
+# Ver perfiles pendientes sin procesar
+python run.py --dry-run
+
+# Procesar 1 perfil pendiente
+python run.py
+
+# Procesar todos los pendientes
+python run.py --all
+```
+
+---
+
+## Automatizar con cron (opcional)
+
+Para que corra cada 5 minutos (como un trigger de n8n):
+
+```bash
+# Editar crontab
+crontab -e
+
+# Agregar esta línea (ajustar rutas):
+*/5 * * * * cd /ruta/a/linkedin_enrichment && /ruta/a/python run.py >> enrichment.log 2>&1
+```
+
+---
+
+## Estructura de archivos
+
+```
+linkedin_enrichment/
+├── config.py              ← Configuración centralizada
+├── sheets_agent.py        ← Agente Google Sheets (leer/escribir)
+├── proxycurl_agent.py     ← Agente Proxycurl (datos LinkedIn)
+├── claude_agent.py        ← Agente Claude (clasificación IA)
+├── run.py                 ← Orquestador principal
+├── requirements.txt       ← Dependencias Python
+├── .env.example           ← Template de variables de entorno
+└── google_credentials.json ← (tú lo agregas, no va al repo)
+```
+
+---
+
+## Cómo funciona cada agente
+
+| Agente | Equivalente n8n | Función |
+|--------|----------------|---------|
+| `sheets_agent.py` | Google Sheets Read/Update | Lee filas pendientes, actualiza columnas |
+| `proxycurl_agent.py` | HTTP Request → Proxycurl | Obtiene datos del perfil vía API |
+| `claude_agent.py` | HTTP Request → Anthropic | Clasifica Industria, País, Poder de Decisión |
+| `run.py` | Workflow (conexiones) | Orquesta la secuencia de agentes |
+| `config.py` | Variables/Credentials | Centraliza configuración |
 
 ---
 
 ## Costos estimados
 
-| Servicio | Costo por perfil | Plan gratuito |
-|----------|-----------------|---------------|
-| Proxycurl | ~$0.10/perfil | 5 créditos/mes |
-| Claude API (Sonnet) | ~$0.003/perfil | - |
+| Servicio | Costo por perfil | Gratis |
+|----------|-----------------|--------|
+| Proxycurl | ~$0.10 | 5/mes |
+| Claude Sonnet | ~$0.003 | - |
 | Google Sheets | Gratis | Sí |
-| n8n Cloud | Incluido en plan | 5 workflows gratis |
 
-**Total estimado**: ~$0.10 por perfil enriquecido
-
----
-
-## Troubleshooting
-
-| Problema | Causa probable | Solución |
-|---|---|---|
-| No procesa perfiles | Columna "Estado" ya dice "Completado" | Borrar el estado de las filas pendientes |
-| Proxycurl 404 | URL de LinkedIn mal formada | Verificar formato: `linkedin.com/in/username/` |
-| Proxycurl 429 | Rate limit excedido | Reducir frecuencia del trigger |
-| Claude JSON error | Claude no devolvió JSON válido | El parser maneja `\`\`\`json` automáticamente |
-| Sheet no actualiza | Nombres de columna no coinciden | Verificar que los headers sean exactos |
-| Credenciales fallan | OAuth2 expirado | Re-autorizar en n8n Credentials |
-
----
-
-## Archivos del proyecto
-
-```
-linkedin_enrichment_workflow.json     ← Workflow n8n para importar
-SETUP_LinkedIn_Enrichment.md          ← Este archivo
-```
+Sin Proxycurl el sistema funciona con datos de la Sheet (Company, Position) pero la clasificación será menos precisa.
