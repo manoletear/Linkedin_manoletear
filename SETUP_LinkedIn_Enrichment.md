@@ -37,7 +37,7 @@ run.py (orquestador)
 ## Paso 1: Instalar dependencias
 
 ```bash
-cd linkedin_enrichment
+cd Linkedin_enrichment
 pip install -r requirements.txt
 ```
 
@@ -49,7 +49,7 @@ pip install -r requirements.txt
 2. Crear proyecto (o usar uno existente)
 3. Habilitar **Google Sheets API** y **Google Drive API**
 4. Crear **Service Account** → generar JSON key
-5. Guardar el JSON como `linkedin_enrichment/google_credentials.json`
+5. Guardar el JSON como `Linkedin_enrichment/google_credentials.json`
 6. Compartir tu Google Sheet con el email del Service Account (el que termina en `@*.iam.gserviceaccount.com`)
 
 ---
@@ -92,7 +92,7 @@ Para que corra cada 5 minutos (como un trigger de n8n):
 crontab -e
 
 # Agregar esta línea (ajustar rutas):
-*/5 * * * * cd /ruta/a/linkedin_enrichment && /ruta/a/python run.py >> enrichment.log 2>&1
+*/5 * * * * cd /ruta/a/Linkedin_enrichment && /ruta/a/python run.py >> enrichment.log 2>&1
 ```
 
 ---
@@ -100,7 +100,7 @@ crontab -e
 ## Estructura de archivos
 
 ```
-linkedin_enrichment/
+Linkedin_enrichment/
 ├── config.py              ← Configuración centralizada
 ├── sheets_agent.py        ← Agente Google Sheets (leer/escribir)
 ├── proxycurl_agent.py     ← Agente Proxycurl (datos LinkedIn)
