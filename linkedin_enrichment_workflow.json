@@ -1,0 +1,369 @@
+{
+  "name": "LinkedIn Profile Enrichment → Google Sheets",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "trigger-schedule",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REEMPLAZAR_CON_TU_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "LinkedIn"
+        },
+        "options": {
+          "returnAllMatches": true
+        }
+      },
+      "id": "read-sheet",
+      "name": "Google Sheets - Leer Perfiles",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [440, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REEMPLAZAR_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filtrar solo filas que tienen URL de LinkedIn pero NO tienen resumen\nconst items = $input.all();\nconst pendientes = [];\n\nfor (const item of items) {\n  const url = item.json['URL LinkedIn'] || item.json['url_linkedin'] || '';\n  const resumen = item.json['Resumen'] || item.json['resumen'] || '';\n  const estado = item.json['Estado'] || item.json['estado'] || '';\n  \n  // Solo procesar si tiene URL y no tiene resumen aún\n  if (url && url.includes('linkedin.com') && !resumen && estado !== 'Completado') {\n    pendientes.push({\n      json: {\n        ...item.json,\n        linkedin_url: url.trim(),\n        row_number: item.json['row_number'] || item.json['__row_number'] || 0\n      }\n    });\n  }\n}\n\n// Tomar solo el primero pendiente (uno a la vez)\nif (pendientes.length > 0) {\n  return [pendientes[0]];\n}\n\n// Si no hay pendientes, no continuar\nreturn [];"
+      },
+      "id": "filter-pending",
+      "name": "Filtrar Pendientes (1 a la vez)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://nubela.co/proxycurl/api/v2/linkedin",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "linkedin_profile_url",
+              "value": "={{ $json.linkedin_url }}"
+            },
+            {
+              "name": "skills",
+              "value": "include"
+            },
+            {
+              "name": "use_cache",
+              "value": "if-present"
+            },
+            {
+              "name": "fallback_to_cache",
+              "value": "on-error"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "proxycurl-api",
+      "name": "Proxycurl - Obtener Perfil LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REEMPLAZAR_PROXYCURL_CREDENTIAL_ID",
+          "name": "Proxycurl API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alternativa gratuita: buscar perfil via Google Search + scraping básico\n// Usar cuando no se tiene Proxycurl\nconst linkedinUrl = $('Filtrar Pendientes (1 a la vez)').first().json.linkedin_url;\n\n// Extraer el username del URL\nconst username = linkedinUrl.split('/in/')[1]?.replace(/\\/$/, '') || 'unknown';\nconst searchName = username.replace(/-/g, ' ');\n\nreturn [{\n  json: {\n    linkedin_url: linkedinUrl,\n    search_name: searchName,\n    username: username,\n    source: 'web_search',\n    nota: 'Datos obtenidos por búsqueda web - completar manualmente si falta info'\n  }\n}];"
+      },
+      "id": "fallback-search",
+      "name": "Alternativa - Búsqueda Web (sin API)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 420],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos del perfil para Claude\nconst profile = $json;\nconst originalData = $('Filtrar Pendientes (1 a la vez)').first().json;\n\n// Construir contexto del perfil\nlet profileContext = '';\n\nif (profile.full_name) {\n  profileContext += `Nombre: ${profile.full_name}\\n`;\n}\nif (profile.headline) {\n  profileContext += `Titular: ${profile.headline}\\n`;\n}\nif (profile.summary) {\n  profileContext += `Resumen propio: ${profile.summary}\\n`;\n}\nif (profile.occupation) {\n  profileContext += `Ocupación: ${profile.occupation}\\n`;\n}\nif (profile.industry) {\n  profileContext += `Industria: ${profile.industry}\\n`;\n}\nif (profile.country_full_name) {\n  profileContext += `País: ${profile.country_full_name}\\n`;\n}\nif (profile.city) {\n  profileContext += `Ciudad: ${profile.city}\\n`;\n}\n\n// Experiencia laboral\nif (profile.experiences && profile.experiences.length > 0) {\n  profileContext += '\\nExperiencia laboral:\\n';\n  for (const exp of profile.experiences) {\n    const from = exp.starts_at ? `${exp.starts_at.month}/${exp.starts_at.year}` : '?';\n    const to = exp.ends_at ? `${exp.ends_at.month}/${exp.ends_at.year}` : 'Presente';\n    profileContext += `- ${exp.title || 'Sin título'} en ${exp.company || 'Sin empresa'} (${from} - ${to})\\n`;\n    if (exp.description) {\n      profileContext += `  ${exp.description.substring(0, 200)}\\n`;\n    }\n  }\n}\n\n// Educación\nif (profile.education && profile.education.length > 0) {\n  profileContext += '\\nEducación:\\n';\n  for (const edu of profile.education) {\n    profileContext += `- ${edu.degree_name || ''} ${edu.field_of_study || ''} en ${edu.school || ''}\\n`;\n  }\n}\n\n// Skills\nif (profile.skills && profile.skills.length > 0) {\n  profileContext += `\\nHabilidades: ${profile.skills.join(', ')}\\n`;\n}\n\n// Certificaciones\nif (profile.certifications && profile.certifications.length > 0) {\n  profileContext += '\\nCertificaciones:\\n';\n  for (const cert of profile.certifications) {\n    profileContext += `- ${cert.name || ''} (${cert.authority || ''})\\n`;\n  }\n}\n\nreturn [{\n  json: {\n    profile_context: profileContext,\n    full_name: profile.full_name || originalData.linkedin_url,\n    headline: profile.headline || '',\n    linkedin_url: originalData.linkedin_url,\n    row_number: originalData.row_number,\n    raw_profile: profile\n  }\n}];"
+      },
+      "id": "prepare-context",
+      "name": "Preparar Contexto para Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-5-20250929\",\n  \"max_tokens\": 1500,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Eres un experto en análisis de perfiles profesionales de LinkedIn. Analiza el siguiente perfil y genera un JSON con exactamente estos campos:\\n\\n```\\n{\\n  \\\"nombre_completo\\\": \\\"Nombre de la persona\\\",\\n  \\\"cargo_actual\\\": \\\"Su cargo o titular actual\\\",\\n  \\\"empresa_actual\\\": \\\"Empresa donde trabaja actualmente\\\",\\n  \\\"industria\\\": \\\"Industria o sector principal\\\",\\n  \\\"rubro\\\": \\\"Rubro específico del negocio\\\",\\n  \\\"ubicacion\\\": \\\"Ciudad, País\\\",\\n  \\\"anos_experiencia\\\": \\\"Número estimado de años de experiencia\\\",\\n  \\\"resumen_profesional\\\": \\\"Resumen de 3-4 líneas describiendo quién es, qué hace, su trayectoria y fortalezas principales\\\",\\n  \\\"habilidades_clave\\\": [\\\"skill1\\\", \\\"skill2\\\", \\\"skill3\\\"],\\n  \\\"nivel_decision\\\": \\\"C-Level / Director / Gerente / Coordinador / Especialista / Otro\\\",\\n  \\\"potencial_contacto\\\": \\\"Alto / Medio / Bajo - basado en su relevancia para negocios de automatización e IA en empresas industriales\\\",\\n  \\\"tema_conversacion_sugerido\\\": \\\"Un tema específico para iniciar conversación basado en su perfil\\\"\\n}\\n```\\n\\nPERFIL LINKEDIN:\\n\" + {{ JSON.stringify($json.profile_context) }} + \"\\n\\nResponde SOLO con el JSON, sin texto adicional.\"\n    }\n  ]\n}"
+      },
+      "id": "claude-api",
+      "name": "Claude API - Generar Resumen",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear respuesta de Claude y preparar datos para Google Sheets\nconst claudeResponse = $json;\nconst prevData = $('Preparar Contexto para Claude').first().json;\n\nlet enrichedData = {};\n\ntry {\n  // Extraer el texto de la respuesta de Claude\n  let responseText = '';\n  if (claudeResponse.content && claudeResponse.content[0]) {\n    responseText = claudeResponse.content[0].text;\n  }\n  \n  // Intentar parsear JSON (puede venir con ```json ... ```)\n  let jsonStr = responseText;\n  const jsonMatch = responseText.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    jsonStr = jsonMatch[1];\n  }\n  \n  enrichedData = JSON.parse(jsonStr.trim());\n} catch (e) {\n  enrichedData = {\n    nombre_completo: prevData.full_name || 'Error al parsear',\n    cargo_actual: prevData.headline || '',\n    empresa_actual: '',\n    industria: '',\n    rubro: '',\n    ubicacion: '',\n    anos_experiencia: '',\n    resumen_profesional: 'Error al procesar con Claude: ' + e.message,\n    habilidades_clave: [],\n    nivel_decision: '',\n    potencial_contacto: '',\n    tema_conversacion_sugerido: ''\n  };\n}\n\n// Generar ID único\nconst timestamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');\nconst idEnrich = `LI-${timestamp}`;\n\nreturn [{\n  json: {\n    id_enriquecimiento: idEnrich,\n    nombre_completo: enrichedData.nombre_completo || '',\n    cargo_actual: enrichedData.cargo_actual || '',\n    empresa_actual: enrichedData.empresa_actual || '',\n    industria: enrichedData.industria || '',\n    rubro: enrichedData.rubro || '',\n    ubicacion: enrichedData.ubicacion || '',\n    anos_experiencia: enrichedData.anos_experiencia || '',\n    resumen_profesional: enrichedData.resumen_profesional || '',\n    habilidades_clave: Array.isArray(enrichedData.habilidades_clave) \n      ? enrichedData.habilidades_clave.join(', ') \n      : (enrichedData.habilidades_clave || ''),\n    nivel_decision: enrichedData.nivel_decision || '',\n    potencial_contacto: enrichedData.potencial_contacto || '',\n    tema_conversacion_sugerido: enrichedData.tema_conversacion_sugerido || '',\n    url_linkedin: prevData.linkedin_url || '',\n    row_number: prevData.row_number,\n    fecha_enriquecimiento: new Date().toISOString().slice(0, 10),\n    estado: 'Completado'\n  }\n}];"
+      },
+      "id": "parse-response",
+      "name": "Procesar Respuesta Claude",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REEMPLAZAR_CON_TU_GOOGLE_SHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "LinkedIn"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID Enriquecimiento": "={{ $json.id_enriquecimiento }}",
+            "Nombre Completo": "={{ $json.nombre_completo }}",
+            "Cargo Actual": "={{ $json.cargo_actual }}",
+            "Empresa Actual": "={{ $json.empresa_actual }}",
+            "Industria": "={{ $json.industria }}",
+            "Rubro": "={{ $json.rubro }}",
+            "Ubicación": "={{ $json.ubicacion }}",
+            "Años Experiencia": "={{ $json.anos_experiencia }}",
+            "Resumen": "={{ $json.resumen_profesional }}",
+            "Habilidades Clave": "={{ $json.habilidades_clave }}",
+            "Nivel Decisión": "={{ $json.nivel_decision }}",
+            "Potencial Contacto": "={{ $json.potencial_contacto }}",
+            "Tema Conversación": "={{ $json.tema_conversacion_sugerido }}",
+            "Fecha Enriquecimiento": "={{ $json.fecha_enriquecimiento }}",
+            "Estado": "={{ $json.estado }}"
+          },
+          "matchingColumns": ["URL LinkedIn"]
+        },
+        "options": {}
+      },
+      "id": "update-sheet",
+      "name": "Google Sheets - Actualizar Fila",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1760, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REEMPLAZAR_CREDENTIAL_ID",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Log de éxito\nconst data = $json;\nconsole.log(`✅ Perfil enriquecido: ${$('Procesar Respuesta Claude').first().json.nombre_completo}`);\nconsole.log(`   URL: ${$('Procesar Respuesta Claude').first().json.url_linkedin}`);\nconsole.log(`   Estado: Completado`);\n\nreturn [{\n  json: {\n    status: 'success',\n    message: `Perfil enriquecido exitosamente`,\n    nombre: $('Procesar Respuesta Claude').first().json.nombre_completo,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "log-success",
+      "name": "Log Éxito",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 300]
+    },
+    {
+      "parameters": {},
+      "id": "error-trigger",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [220, 520]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Capturar y loguear error\nconst error = $json;\nconsole.log('❌ Error en enriquecimiento LinkedIn:', JSON.stringify(error, null, 2));\n\nreturn [{\n  json: {\n    status: 'error',\n    message: error.message || 'Error desconocido',\n    timestamp: new Date().toISOString(),\n    details: error\n  }\n}];"
+      },
+      "id": "handle-error",
+      "name": "Capturar Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 520]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Leer Perfiles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Leer Perfiles": {
+      "main": [
+        [
+          {
+            "node": "Filtrar Pendientes (1 a la vez)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar Pendientes (1 a la vez)": {
+      "main": [
+        [
+          {
+            "node": "Proxycurl - Obtener Perfil LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Proxycurl - Obtener Perfil LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Preparar Contexto para Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contexto para Claude": {
+      "main": [
+        [
+          {
+            "node": "Claude API - Generar Resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API - Generar Resumen": {
+      "main": [
+        [
+          {
+            "node": "Procesar Respuesta Claude",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Respuesta Claude": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Actualizar Fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Actualizar Fila": {
+      "main": [
+        [
+          {
+            "node": "Log Éxito",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Capturar Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "LinkedIn",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "Enrichment",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}
