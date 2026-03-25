@@ -1,0 +1,509 @@
+# ArcGIS Developer SDKs & APIs - Skill de Conocimiento Completo
+
+## Descripción
+Conocimiento completo de todos los SDKs, APIs y herramientas de desarrollo de ArcGIS para construir aplicaciones de mapeo y análisis espacial.
+
+---
+
+## 1. ArcGIS Maps SDK for JavaScript (v5.0+)
+
+### Descripción
+SDK principal para construir aplicaciones web interactivas con mapas 2D/3D en el navegador.
+
+### Arquitectura v5.0 (Transición Widgets → Components):
+- **Components** (`@arcgis/map-components`): Nuevo estándar basado en Web Components
+- **Widgets**: DEPRECADOS desde v5.0, se eliminarán en v6.0 (Q1 2027)
+- Los componentes tienen funcionalidad equivalente a los widgets del core API
+- El core API sigue accesible a través de componentes
+
+### Clases Principales:
+
+```javascript
+// Map - Contenedor de capas
+import Map from "@arcgis/core/Map";
+const map = new Map({
+  basemap: "arcgis/topographic"
+});
+
+// MapView - Vista 2D
+import MapView from "@arcgis/core/views/MapView";
+const view = new MapView({
+  map: map,
+  container: "viewDiv",
+  center: [-118.805, 34.027],
+  zoom: 13
+});
+
+// SceneView - Vista 3D
+import SceneView from "@arcgis/core/views/SceneView";
+const scene = new SceneView({
+  map: map,
+  container: "viewDiv"
+});
+```
+
+### Tipos de Capas Disponibles:
+| Capa | Descripción |
+|------|-------------|
+| FeatureLayer | Datos vectoriales con atributos, editable |
+| GraphicsLayer | Gráficos temporales/dinámicos |
+| VectorTileLayer | Tiles vectoriales con estilos |
+| TileLayer | Tiles raster pre-renderizados |
+| MapImageLayer | Imágenes dinámicas del servidor |
+| ImageryLayer | Datos raster/imagery |
+| ImageryTileLayer | Tiles de imágenes |
+| GeoJSONLayer | Datos GeoJSON |
+| CSVLayer | Datos CSV con coordenadas |
+| SceneLayer | Datos 3D (scene services) |
+| BuildingSceneLayer | Modelos BIM 3D |
+| IntegratedMeshLayer | Mallas 3D integradas |
+| PointCloudLayer | Nubes de puntos 3D |
+| StreamLayer | Datos en tiempo real |
+| RouteLayer | Rutas y direcciones |
+| ParquetLayer | Archivos Apache Parquet |
+| KMLLayer | Datos KML/KMZ |
+| WMSLayer, WMTSLayer, OGCFeatureLayer | Estándares OGC |
+
+### Componentes/Widgets Principales:
+- **Navegación**: Home, Zoom, Compass, NavigationToggle, Locate, Track
+- **Información**: Popup, Feature, Features, Legend, Attribution
+- **Búsqueda**: Search, BasemapGallery, BasemapToggle, LayerList, BasemapLayerList
+- **Edición**: Editor, FeatureForm, FeatureTemplates, Sketch
+- **Medición**: DistanceMeasurement2D, AreaMeasurement2D, DirectLineMeasurement3D, AreaMeasurement3D, ElevationProfile
+- **Análisis 3D**: Daylight, ShadowCast, Slice, LineOfSight, BuildingExplorer
+- **Datos**: FeatureTable, Bookmarks, TimeSlider, Print, CoordinateConversion
+- **Routing**: Directions
+- **AI (beta)**: Assistant component (chat con lenguaje natural para web maps)
+
+### Instalación:
+```bash
+npm install @arcgis/core @arcgis/map-components
+```
+
+### Referencia API: https://developers.arcgis.com/javascript/latest/api-reference/
+
+---
+
+## 2. ArcGIS API for Python
+
+### Descripción
+API completa para scripting, automatización, análisis de datos y ciencia de datos geoespacial.
+
+### Módulos Principales:
+
+#### `arcgis.gis` - Modelo de Información GIS
+```python
+from arcgis.gis import GIS
+
+# Conexión a ArcGIS Online
+gis = GIS("https://www.arcgis.com", "username", "password")
+# Conexión con API key
+gis = GIS(api_key="YOUR_API_KEY")
+# Conexión a Enterprise
+gis = GIS("https://portal.enterprise.com/portal", "username", "password")
+
+# Buscar contenido
+items = gis.content.search("population", item_type="Feature Layer")
+# Gestionar usuarios
+users = gis.users.search("*")
+# Gestionar grupos
+groups = gis.groups.search("transportation")
+```
+
+#### `arcgis.features` - Features y Feature Layers
+```python
+from arcgis.features import FeatureLayer, FeatureLayerCollection
+
+# Acceder a feature layer
+fl = FeatureLayer("https://services.arcgis.com/.../FeatureServer/0")
+# Consultar features
+features = fl.query(where="POPULATION > 100000")
+# Spatially Enabled DataFrame (SeDF)
+sdf = fl.query().sdf
+# Editar features
+fl.edit_features(adds=[feature1], updates=[feature2], deletes="1,2,3")
+```
+
+#### `arcgis.mapping` - Mapas y Escenas Web
+```python
+from arcgis.mapping import WebMap, WebScene
+
+# Crear web map
+wm = WebMap()
+wm.add_layer(feature_layer)
+wm.save(item_properties={"title": "Mi Mapa"})
+
+# Abrir web map existente
+wm = WebMap(gis.content.get("item_id"))
+```
+
+#### `arcgis.geocoding` - Geocodificación
+```python
+from arcgis.geocoding import geocode, reverse_geocode, batch_geocode
+
+# Geocodificación simple
+results = geocode("380 New York St, Redlands, CA")
+# Geocodificación inversa
+address = reverse_geocode([long, lat])
+# Batch geocoding
+addresses = ["Address 1", "Address 2", "Address 3"]
+results = batch_geocode(addresses)
+```
+
+#### `arcgis.network` - Análisis de Redes
+```python
+from arcgis.network import RouteLayer
+# Routing, service areas, closest facility, OD matrix
+```
+
+#### `arcgis.geoenrichment` - Enriquecimiento de Datos
+```python
+from arcgis.geoenrichment import enrich, Country
+# Obtener datos demográficos para ubicaciones
+enriched = enrich(study_areas=[{"geometry": point}])
+```
+
+#### `arcgis.raster` - Datos Raster e Imágenes
+```python
+from arcgis.raster import ImageryLayer
+# Funciones de análisis raster, NDVI, clasificación, etc.
+```
+
+#### Otros Módulos Importantes:
+- `arcgis.geometry` - Operaciones geométricas (buffer, intersect, union, etc.)
+- `arcgis.geoprocessing` - Ejecutar herramientas de geoprocessing
+- `arcgis.realtime` - Datos en tiempo real
+- `arcgis.learn` - Machine learning y deep learning geoespacial
+- `arcgis.apps` - Gestión de aplicaciones
+- `arcgis.env` - Variables de entorno
+- `arcgis.auth` - Autenticación
+
+### Instalación:
+```bash
+conda install -c esri arcgis
+# o
+pip install arcgis
+```
+
+### Referencia API: https://developers.arcgis.com/python/latest/api-reference/
+
+---
+
+## 3. ArcGIS REST APIs
+
+### Servicios de Localización (Location-Based Services):
+
+#### Basemap Styles Service
+```
+GET https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2/styles/{style}
+Estilos: arcgis/streets, arcgis/navigation, arcgis/topographic, arcgis/outdoor,
+         arcgis/light-gray, arcgis/dark-gray, arcgis/imagery, arcgis/oceans
+```
+
+#### Geocoding Service
+```
+# Geocode (find address candidates)
+GET https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates
+Params: address, singleLine, category, location, outFields, maxLocations, f=json
+
+# Reverse geocode
+GET https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/reverseGeocode
+Params: location={x},{y}, outSR, f=json
+
+# Suggest
+GET https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/suggest
+Params: text, location, category, f=json
+
+# Batch geocode
+POST https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/geocodeAddresses
+Params: addresses (JSON array), f=json
+```
+
+#### Routing Service
+```
+# Rutas simples
+GET https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World/solve
+Params: stops, barriers, returnDirections, directionsLanguage, f=json
+
+# Service Areas (isócronas)
+POST https://route-api.arcgis.com/arcgis/rest/services/World/ServiceAreas/NAServer/ServiceArea_World/solveServiceArea
+Params: facilities, defaultBreaks, travelDirection, f=json
+
+# Closest Facility
+POST .../ClosestFacility_World/solveClosestFacility
+# OD Cost Matrix
+POST .../ODCostMatrix_World/solveODCostMatrix
+# Vehicle Routing Problem
+POST .../VehicleRoutingProblem_World/solve
+```
+
+#### GeoEnrichment Service
+```
+POST https://geoenrich.arcgis.com/arcgis/rest/services/World/GeoEnrichmentServer/GeoEnrichment/enrich
+Params: studyAreas, dataCollections, analysisVariables, f=json
+Soporta: Ring buffers, drive time areas, walk time areas
++15,000 variables, +150 países
+```
+
+#### Elevation Service
+```
+GET https://elevation-api.arcgis.com/arcgis/rest/services/elevation/get
+Params: lon, lat, units (meters/feet), f=json
+```
+
+#### Places Service
+```
+# Near Point search
+GET https://places-api.arcgis.com/arcgis/rest/services/places-service/v1/places/near-point
+Params: x, y, radius, categoryIds, searchText, f=json
+
+# Place details
+GET https://places-api.arcgis.com/arcgis/rest/services/places-service/v1/places/{placeId}
+```
+
+### Servicios Enterprise (ArcGIS Server REST API):
+
+#### Feature Service
+```
+# Query features
+GET {serviceUrl}/FeatureServer/{layerId}/query
+Params: where, outFields, geometry, geometryType, spatialRel, returnGeometry, f=json
+
+# Add features
+POST {serviceUrl}/FeatureServer/{layerId}/addFeatures
+Body: features=[{geometry:{...}, attributes:{...}}]
+
+# Update features
+POST {serviceUrl}/FeatureServer/{layerId}/updateFeatures
+# Delete features
+POST {serviceUrl}/FeatureServer/{layerId}/deleteFeatures
+# Apply edits
+POST {serviceUrl}/FeatureServer/{layerId}/applyEdits
+```
+
+#### Map Service
+```
+GET {serviceUrl}/MapServer
+GET {serviceUrl}/MapServer/{layerId}/query
+GET {serviceUrl}/MapServer/export?bbox=...&size=...&f=image
+```
+
+#### Geoprocessing Service
+```
+# Ejecutar tarea (sync)
+POST {serviceUrl}/GPServer/{taskName}/execute
+# Ejecutar tarea (async)
+POST {serviceUrl}/GPServer/{taskName}/submitJob
+GET {serviceUrl}/GPServer/{taskName}/jobs/{jobId}
+GET {serviceUrl}/GPServer/{taskName}/jobs/{jobId}/results/{paramName}
+```
+
+#### Portal REST API
+```
+# Buscar items
+GET https://www.arcgis.com/sharing/rest/search
+Params: q, num, start, sortField, f=json
+
+# Obtener item
+GET https://www.arcgis.com/sharing/rest/content/items/{itemId}
+# Datos del item
+GET https://www.arcgis.com/sharing/rest/content/items/{itemId}/data
+# Agregar item
+POST https://www.arcgis.com/sharing/rest/content/users/{username}/addItem
+```
+
+### ArcGIS REST JS (Librería JavaScript):
+```javascript
+import { geocode } from "@esri/arcgis-rest-geocoding";
+import { ApiKeyManager } from "@esri/arcgis-rest-request";
+
+const auth = ApiKeyManager.fromKey("YOUR_API_KEY");
+geocode({ address: "1600 Pennsylvania Ave", authentication: auth })
+  .then(response => console.log(response.candidates));
+```
+
+**Instalación REST JS:**
+```bash
+npm install @esri/arcgis-rest-request @esri/arcgis-rest-geocoding @esri/arcgis-rest-routing
+```
+
+### Referencia REST APIs: https://developers.arcgis.com/rest/
+
+---
+
+## 4. ArcGIS Maps SDKs for Native Apps
+
+### SDK para Kotlin (Android)
+```kotlin
+// build.gradle
+implementation("com.esri:arcgis-maps-kotlin:200.x.x")
+
+// Crear mapa
+val map = ArcGISMap(BasemapStyle.ArcGISTopographic)
+val mapView = MapView(context).apply {
+    this.map = map
+    setViewpoint(Viewpoint(34.0270, -118.8050, 72000.0))
+}
+```
+**Docs**: https://developers.arcgis.com/kotlin/
+
+### SDK para Swift (iOS/macOS/visionOS)
+```swift
+import ArcGIS
+
+let map = Map(basemapStyle: .arcGISTopographic)
+let mapView = MapView(map: map)
+    .onViewpointChanged(kind: .centerAndScale) { viewpoint in
+        // Handle viewpoint change
+    }
+```
+**Docs**: https://developers.arcgis.com/swift/
+
+### SDK para Flutter (Android/iOS)
+```dart
+import 'package:arcgis_maps/arcgis_maps.dart';
+
+final map = ArcGISMap.withBasemapStyle(BasemapStyle.arcGISTopographic);
+ArcGISMapView(
+  controllerProvider: () => ArcGISMapView.createController()..arcGISMap = map,
+)
+```
+**Docs**: https://developers.arcgis.com/flutter/
+
+### SDK para .NET (Windows/Android/iOS/macOS)
+```csharp
+using Esri.ArcGISRuntime.Mapping;
+using Esri.ArcGISRuntime.UI.Controls;
+
+var map = new Map(BasemapStyle.ArcGISTopographic);
+MyMapView.Map = map;
+MyMapView.SetViewpoint(new Viewpoint(34.027, -118.805, 72000));
+```
+**Docs**: https://developers.arcgis.com/net/
+
+### SDK para Qt (Windows/Linux/macOS/Android/iOS)
+```cpp
+#include "Map.h"
+#include "MapQuickView.h"
+Map* map = new Map(BasemapStyle::ArcGISTopographic, this);
+m_mapView->setMap(map);
+```
+**Docs**: https://developers.arcgis.com/qt/
+
+### Capacidades Comunes de los Native SDKs:
+- Mapeo 2D y 3D
+- Geocoding y routing
+- Geoprocessing
+- Edición de features
+- **Offline mapping**: Mobile Map Packages (MMPK), offline areas, sync
+- Autenticación OAuth 2.0
+- Toolkits open source con componentes UI
+
+---
+
+## 5. Autenticación y Seguridad
+
+### Tipos de Autenticación:
+
+#### API Key Authentication (Apps públicas)
+```javascript
+// JavaScript
+import esriConfig from "@arcgis/core/config";
+esriConfig.apiKey = "YOUR_API_KEY";
+```
+```python
+# Python
+gis = GIS(api_key="YOUR_API_KEY")
+```
+- Tokens de larga duración (hasta 1 año)
+- Para apps que usan location services públicos
+- Máximo 100 items propios accesibles por API key
+- Disponible en ArcGIS Online (Creator+) y Enterprise 11.4+
+
+#### User Authentication (OAuth 2.0 - Apps privadas)
+```javascript
+import OAuthInfo from "@arcgis/core/identity/OAuthInfo";
+import IdentityManager from "@arcgis/core/identity/IdentityManager";
+
+const oAuthInfo = new OAuthInfo({
+  appId: "YOUR_CLIENT_ID",
+  portalUrl: "https://www.arcgis.com"
+});
+IdentityManager.registerOAuthInfos([oAuthInfo]);
+```
+- Tokens de corta duración
+- El usuario inicia sesión
+- Hereda privilegios del usuario
+
+#### App Authentication (Server-to-Server)
+```
+POST https://www.arcgis.com/sharing/rest/oauth2/token
+Body: client_id=X&client_secret=Y&grant_type=client_credentials
+```
+- Para aplicaciones servidor sin interacción de usuario
+- Nunca exponer client_secret en cliente
+
+### Uso de Access Tokens:
+```
+GET {serviceUrl}?token={access_token}&f=json
+// O en header:
+Authorization: Bearer {access_token}
+```
+
+---
+
+## 6. Offline Mapping
+
+### Mobile Map Packages (MMPK):
+- Paquetes de datos pre-empaquetados para uso sin conexión
+- Incluyen basemaps, layers, locators, routing networks
+- Se crean en ArcGIS Pro
+
+### Preplanned Offline Areas:
+- Áreas definidas por el administrador para descarga offline
+- Sincronización bidireccional cuando hay conexión
+
+### On-Demand Offline:
+- El usuario define el área a descargar
+- Generación de paquete bajo demanda
+
+---
+
+## 7. App Builders (Low-Code/No-Code)
+
+### ArcGIS Experience Builder
+- Creación de experiencias web multipágina
+- Widgets drag-and-drop
+- Layouts flexibles, responsive
+- Integración de 2D, 3D, dashboards, stories
+- Triggers y acciones entre widgets
+- Templates personalizables
+
+### ArcGIS Instant Apps
+- Templates prediseñados para casos de uso comunes
+- Configuración rápida sin código
+- Desplegables desde ArcGIS Online
+
+### ArcGIS StoryMaps
+- Narrativas interactivas con mapas
+- Multimedia: fotos, videos, mapas embebidos
+- Express maps para mapas rápidos
+
+### ArcGIS Dashboards
+- Visualización en tiempo real de datos operacionales
+- Indicadores, gráficos, listas, mapas
+- Filtros interactivos
+- Actualizaciones automáticas
+
+### ArcGIS Survey123
+- Formularios de recolección de datos
+- **Survey123 Connect**: Desktop con XLSForm avanzado
+- **Survey123 Web Designer**: Drag-and-drop en navegador
+- REST API, webhooks, URL schemes
+- Integración con Field Maps, Dashboards, Experience Builder
+
+### ArcGIS Field Maps
+- App móvil para trabajo de campo
+- Edición de features en terreno
+- GPS de alta precisión
+- Offline mapping integrado

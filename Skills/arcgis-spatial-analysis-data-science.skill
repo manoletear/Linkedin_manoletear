@@ -1,0 +1,445 @@
+# ArcGIS Spatial Analysis & Data Science - Skill de Conocimiento Completo
+
+## Descripción
+Conocimiento completo de análisis espacial, ciencia de datos geoespacial, machine learning, y herramientas analíticas del ecosistema ArcGIS.
+
+---
+
+## 1. Análisis Espacial con Location Services
+
+### Herramientas de Análisis Espacial Online
+
+Las herramientas de análisis espacial de ArcGIS se pueden ejecutar vía REST API, SDKs o portal UI.
+
+#### Categorías de Análisis:
+
+### 1.1 Find Locations (Encontrar Ubicaciones)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Find Existing Locations | Seleccionar features que cumplen criterios espaciales/atributos |
+| Derive New Locations | Crear nuevos features basados en consultas espaciales |
+| Find Similar Locations | Encontrar ubicaciones similares a ubicaciones de referencia |
+| Choose Best Facilities | Ubicación óptima de instalaciones (Location-Allocation) |
+| Create Viewshed | Áreas visibles desde puntos de observación |
+| Create Watersheds | Cuencas hidrográficas desde puntos |
+| Trace Downstream | Trazar flujo de agua aguas abajo |
+
+### 1.2 Analyze Patterns (Analizar Patrones)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Calculate Density | Mapa de densidad (kernel density) |
+| Find Hot Spots | Análisis Gi* de Getis-Ord (clusters estadísticos) |
+| Find Outliers | Análisis Anselin Local Moran's I |
+| Find Point Clusters | DBSCAN clustering de puntos |
+| Interpolate Points | Interpolación (EBK) de valores puntuales |
+| Find Space-Time Clusters | Clusters espacio-temporales |
+
+### 1.3 Use Proximity (Proximidad)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Create Buffers | Zonas de influencia |
+| Create Drive-Time Areas | Áreas de tiempo de conducción (isócronas) |
+| Find Nearest | Feature más cercano |
+| Plan Routes | Optimización de rutas para múltiples paradas |
+| Connect Origins to Destinations | Conexiones OD con rutas |
+
+### 1.4 Summarize Data (Resumir Datos)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Aggregate Points | Agregar puntos en áreas |
+| Join Features | Unir features por atributo o ubicación |
+| Summarize Nearby | Resumen de features cercanos |
+| Summarize Within | Resumen de features contenidos en áreas |
+| Summarize Center and Dispersion | Centro y dispersión de features |
+
+### 1.5 Enrich Data (Enriquecer Datos)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Enrich Layer | Agregar variables demográficas/económicas |
+
+### 1.6 Manage Data (Gestionar Datos)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Dissolve Boundaries | Fusionar features por atributo |
+| Extract Data | Extraer subset de datos |
+| Merge Layers | Fusionar múltiples capas |
+| Overlay Layers | Superposición (intersect, erase, union) |
+| Generate Tessellations | Crear grillas (hexágonos, cuadrados, triángulos) |
+
+---
+
+## 2. GeoEnrichment - Datos Demográficos
+
+### Variables Disponibles (>15,000):
+
+#### Demografía:
+- Población total, por sexo, por edad (bandas quinquenales)
+- Hogares, tamaño medio de hogar
+- Densidad de población
+- Proyecciones a 5 años
+
+#### Ingresos y Economía:
+- Ingreso per cápita, mediano, promedio
+- Distribución de ingresos por banda
+- Índice de riqueza
+- PIB por sector
+
+#### Educación:
+- Nivel educativo (sin educación hasta postgrado)
+- Tasa de alfabetización
+
+#### Empleo:
+- Tasa de empleo/desempleo
+- Empleo por sector (agricultura, industria, servicios)
+- Ocupaciones
+
+#### Vivienda:
+- Tipo de vivienda (casa, departamento, etc.)
+- Tenencia (propia, arrendada)
+- Valor de la vivienda
+- Año de construcción
+
+#### Gasto del Consumidor:
+- Gasto por categoría (alimentación, transporte, salud, educación, entretenimiento)
+- Índice de poder adquisitivo
+
+#### Salud:
+- Indicadores de salud por región
+- Acceso a servicios de salud
+
+#### Movilidad/Transporte:
+- Modo de transporte al trabajo
+- Tiempo de viaje al trabajo
+- Vehículos por hogar
+
+### Cobertura Geográfica:
+- **+150 países** con datos demográficos
+- **Datos Esri actualizados**: Updated Demographics (proyecciones anuales)
+- **Fuentes**: Censos nacionales, encuestas, modelos estadísticos de Esri
+
+### Ejemplo de Uso:
+```python
+from arcgis.geoenrichment import enrich, Country
+
+# Enriquecer ubicaciones con datos demográficos
+study_areas = [{"geometry": {"x": -117.19, "y": 34.05}, "areaType": "RingBuffer", "bufferUnits": "esriMiles", "bufferRadii": [1, 3, 5]}]
+enriched = enrich(study_areas, data_collections=["KeyGlobalFacts", "Age", "Income"])
+
+# Explorar datos disponibles por país
+chile = Country.get("CL")
+chile.data_collections  # Ver colecciones de datos disponibles
+chile.enrich(study_areas)
+```
+
+---
+
+## 3. ArcGIS Notebooks (Jupyter)
+
+### Entorno:
+- Jupyter Notebook integrado en ArcGIS Online y Enterprise
+- Python 3 con ArcGIS API for Python pre-instalado
+- Librerías de ciencia de datos incluidas (pandas, numpy, scipy, scikit-learn, matplotlib)
+
+### Capacidades:
+```python
+# Acceso al GIS
+from arcgis.gis import GIS
+gis = GIS("home")  # Autenticación automática en el portal
+
+# Visualización interactiva
+from arcgis.mapping import WebMap
+m = gis.map("Santiago, Chile")
+m.basemap = "dark-gray-vector"
+m  # Renderizar mapa interactivo en notebook
+
+# Análisis con Spatially Enabled DataFrame
+from arcgis.features import FeatureLayer
+fl = FeatureLayer("https://services.arcgis.com/.../FeatureServer/0")
+sdf = fl.query().sdf
+
+# Operaciones pandas + espacial
+sdf.spatial.plot(map_widget=m)
+sdf.spatial.buffer(distance=1000)  # Buffer de 1km
+sdf.spatial.overlay(other_sdf, how="intersection")
+
+# Machine Learning
+from arcgis.learn import prepare_data, SingleShotDetector
+data = prepare_data(training_data, chip_size=224)
+model = SingleShotDetector(data)
+model.fit(epochs=50)
+model.predict(test_data)
+```
+
+### Programación de Notebooks:
+- Ejecutar notebooks en horarios programados
+- Automatizar ETL, análisis recurrentes, reportes
+- Configurar en ArcGIS Online o Enterprise
+
+---
+
+## 4. Spatially Enabled DataFrame (SeDF)
+
+### Concepto:
+Extensión de Pandas DataFrame para trabajar con datos espaciales directamente.
+
+### Operaciones:
+
+```python
+import pandas as pd
+from arcgis.features import GeoAccessor, GeoSeriesAccessor
+
+# Crear SeDF desde feature layer
+sdf = pd.DataFrame.spatial.from_featureclass(r"C:\data\cities.shp")
+# Desde feature layer URL
+sdf = pd.DataFrame.spatial.from_layer(feature_layer)
+# Desde CSV con coordenadas
+df = pd.read_csv("data.csv")
+sdf = pd.DataFrame.spatial.from_xy(df, "LONGITUDE", "LATITUDE")
+# Desde GeoJSON
+sdf = pd.DataFrame.spatial.from_featureclass("data.geojson")
+
+# Propiedades espaciales
+sdf.spatial.sr           # Sistema de referencia
+sdf.spatial.bbox         # Bounding box
+sdf.spatial.geometry_type # Tipo de geometría
+sdf.spatial.area         # Áreas
+sdf.spatial.length       # Longitudes
+sdf.spatial.centroid     # Centroides
+sdf.spatial.true_centroid # Centroide real
+
+# Operaciones espaciales
+sdf.spatial.buffer(distance=500)
+sdf.spatial.clip(envelope)
+sdf.spatial.dissolve(by="REGION")
+sdf.spatial.erase(erase_sdf)
+sdf.spatial.overlay(other_sdf, how="intersection")
+sdf.spatial.project(spatial_reference)
+sdf.spatial.relationship(other_sdf, relation="intersects")
+sdf.spatial.select(other_sdf)
+
+# Exportar
+sdf.spatial.to_featureclass(r"C:\output\result.shp")
+sdf.spatial.to_featurelayer("My Layer", gis=gis)
+sdf.spatial.to_table(r"C:\output\table.csv")
+
+# Visualización
+sdf.spatial.plot(map_widget=m, renderer_type='c',  # classificación
+                 method='esriClassifyNaturalBreaks',
+                 class_count=5, col='POPULATION')
+```
+
+---
+
+## 5. Machine Learning y Deep Learning Geoespacial
+
+### arcgis.learn Module
+
+#### Detección de Objetos:
+```python
+from arcgis.learn import prepare_data, SingleShotDetector, RetinaNet, FasterRCNN, YOLOv3
+
+# Preparar datos de entrenamiento
+data = prepare_data(training_data, chip_size=448, batch_size=16)
+
+# Entrenar modelo
+model = SingleShotDetector(data, backbone="resnet50")
+model.lr_find()  # Encontrar learning rate óptimo
+model.fit(epochs=50, lr=0.001)
+
+# Evaluar
+model.average_precision_score()
+model.show_results()
+
+# Predecir
+predictions = model.predict(test_raster)
+```
+
+#### Clasificación de Píxeles:
+```python
+from arcgis.learn import prepare_data, UnetClassifier, PSPNet, DeepLab
+
+data = prepare_data(training_data, chip_size=256, class_mapping={1: "Water", 2: "Urban", 3: "Forest"})
+model = UnetClassifier(data)
+model.fit(epochs=25)
+classified = model.predict(imagery_layer)
+```
+
+#### Detección de Cambios:
+```python
+from arcgis.learn import ChangeDetector
+model = ChangeDetector(data)
+model.fit(epochs=30)
+changes = model.predict(before_image, after_image)
+```
+
+#### Clustering Espacial:
+```python
+from arcgis.features.analysis import find_point_clusters
+# DBSCAN, HDBSCAN, Self-Adjusting
+clusters = find_point_clusters(input_layer,
+                                method="DBSCAN",
+                                minimum_points=10,
+                                search_distance="500 Meters")
+```
+
+#### Hot Spot Analysis:
+```python
+from arcgis.features.analysis import find_hot_spots
+# Gi* de Getis-Ord
+hot_spots = find_hot_spots(input_layer,
+                           analysis_field="CRIME_COUNT",
+                           bounding_polygon=study_area)
+```
+
+---
+
+## 6. GeoAnalytics (Big Data)
+
+### Herramientas de GeoAnalytics Server:
+
+| Herramienta | Descripción |
+|-------------|-------------|
+| Aggregate Points | Agregar puntos en bins/áreas |
+| Join Features | Join espacial/temporal distribuido |
+| Create Buffers | Buffers distribuidos |
+| Reconstruct Tracks | Reconstruir tracks de GPS |
+| Find Dwell Locations | Encontrar ubicaciones de permanencia |
+| Detect Incidents | Detectar incidentes en datos temporales |
+| Calculate Motion Statistics | Estadísticas de movimiento |
+| Find Similar Locations | Ubicaciones similares (big data) |
+| Forest-based Classification | Random Forest distribuido |
+| GWR (Geographically Weighted Regression) | Regresión ponderada geográficamente |
+| Snap Tracks | Alinear tracks a redes de carreteras |
+| Describe Dataset | Estadísticas descriptivas del dataset |
+| Clip Layer | Recortar por área |
+| Dissolve Boundaries | Disolver límites |
+| Overlay Layers | Superposición distribuida |
+
+### Uso desde Python:
+```python
+from arcgis.geoanalytics import summarize_data, find_locations, analyze_patterns
+
+# Aggregate Points a hexágonos
+result = summarize_data.aggregate_points(
+    point_layer=tracking_data,
+    bin_type="HEXAGON",
+    bin_size=1,
+    bin_size_unit="Kilometers"
+)
+
+# Reconstruct Tracks
+tracks = find_locations.reconstruct_tracks(
+    input_layer=gps_points,
+    track_fields=["VEHICLE_ID"],
+    method="GEODESIC",
+    time_split=15,
+    time_split_unit="Minutes"
+)
+```
+
+---
+
+## 7. Raster Analytics
+
+### Funciones Raster (Raster Functions):
+
+| Categoría | Funciones |
+|-----------|-----------|
+| **Índices** | NDVI, NDWI, SAVI, EVI, NDBI, BAI |
+| **Clasificación** | Classify, Random Trees, SVM, Maximum Likelihood |
+| **Álgebra** | Band Arithmetic, Raster Calculator |
+| **Superficie** | Slope, Aspect, Hillshade, Curvature, Viewshed |
+| **Hidrología** | Flow Direction, Flow Accumulation, Watershed |
+| **Estadísticas** | Zonal Statistics, Cell Statistics, Focal Statistics |
+| **Conversión** | Reclassify, Lookup, Raster to Polygon |
+| **Filtros** | Convolution, Statistics, Focal |
+| **Geometric** | Clip, Resample, Project, Mosaic |
+| **Temporal** | Multidimensional Analysis, Trend, Anomaly |
+
+### Uso desde Python:
+```python
+from arcgis.raster import ImageryLayer
+from arcgis.raster.functions import ndvi, slope, aspect, hillshade
+
+# NDVI
+imagery = ImageryLayer("https://services.arcgis.com/.../ImageServer")
+ndvi_result = ndvi(imagery, band_indexes="5 4")  # NIR, Red
+
+# Slope
+dem = ImageryLayer("https://elevation.arcgis.com/.../ImageServer")
+slope_result = slope(dem, z_factor=1)
+
+# Raster analytics distribuido (Image Server)
+from arcgis.raster.analytics import generate_raster, calculate_density
+result = generate_raster(raster_function=my_function, output_name="Analysis Result")
+```
+
+---
+
+## 8. ArcGIS Insights
+
+### Descripción:
+Herramienta de análisis exploratorio que combina GIS, BI y ciencia de datos.
+
+### Capacidades:
+- Drag-and-drop de datos para crear visualizaciones
+- Mapas, gráficos, tablas en una sola interfaz
+- Análisis espacial integrado
+- Conexiones a múltiples fuentes de datos
+- Scripting con Python/R
+- Modelos reproducibles
+
+### Tipos de Visualización:
+- Mapas: coropletas, proporcionales, heat maps, clusters, flow maps
+- Gráficos: barras, líneas, scatter plot, histograma, box plot, treemap
+- Tablas: summary tables, pivot tables
+- KPIs e indicadores
+
+---
+
+## 9. Patrones de Análisis Comunes
+
+### Site Selection (Selección de Sitios):
+```
+1. Definir criterios (proximidad a carreteras, densidad población, uso de suelo)
+2. Crear buffers/service areas
+3. Overlay/intersect capas de criterios
+4. Weighted overlay o suitability analysis
+5. Ranking de sitios candidatos
+```
+
+### Market Analysis (Análisis de Mercado):
+```
+1. Geocodificar ubicaciones de clientes y competencia
+2. GeoEnrichment: datos demográficos del área
+3. Trade area analysis (drive time/distance)
+4. Gap analysis: áreas desatendidas
+5. Customer profiling con Tapestry Segmentation
+```
+
+### Environmental Analysis:
+```
+1. DEM/Elevation analysis (slope, aspect, watershed)
+2. Land use/land cover classification
+3. Change detection multitemporal
+4. Species distribution modeling
+5. Environmental impact assessment con overlay
+```
+
+### Public Safety:
+```
+1. Geocodificar incidentes
+2. Hot spot analysis (Gi*)
+3. Temporal pattern analysis
+4. Predictive policing con ML
+5. Response time analysis (service areas)
+```
+
+### Supply Chain / Logistics:
+```
+1. Geocodificar warehouses, stores, customers
+2. OD Cost Matrix
+3. Vehicle Routing Problem (VRP)
+4. Last Mile Delivery optimization
+5. Service area analysis
+```

@@ -1,0 +1,432 @@
+# ArcGIS Pro & Desktop GIS - Skill de Conocimiento Completo
+
+## Descripción
+Conocimiento exhaustivo de ArcGIS Pro, incluyendo herramientas de geoprocessing, análisis espacial, 3D, Python/ArcPy, ModelBuilder, y flujos de trabajo profesionales.
+
+---
+
+## 1. ArcGIS Pro - Visión General
+
+ArcGIS Pro es la aplicación de escritorio profesional de Esri para GIS 2D, 3D, análisis espacial, gestión de datos y publicación de servicios.
+
+### Características Principales:
+- **64-bit, multi-threaded**: Rendimiento optimizado
+- **2D y 3D nativos**: Mapas y escenas en la misma aplicación
+- **Proyecto-céntrico**: Archivos .aprx contienen mapas, layouts, toolboxes, conexiones
+- **Ribbon UI**: Interfaz de cinta contextual
+- **Integración completa con ArcGIS Online y Enterprise**
+- **Python 3 con ArcPy** integrado
+- **Conda** como gestor de paquetes Python
+- **ArcGIS Pro 3.6** (última versión): Búsqueda semántica con IA, mejoras 3D
+- **ArcGIS Pro 3.7** (planificado Q2 2026): Migración a .NET 10 LTS
+
+---
+
+## 2. Análisis Espacial
+
+### Categorías de Herramientas de Análisis:
+
+#### Overlay (Superposición)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Intersect | Intersección geométrica de features |
+| Union | Unión geométrica de features |
+| Erase | Borrar áreas de una capa usando otra |
+| Identity | Superposición con identidad |
+| Symmetrical Difference | Diferencia simétrica |
+| Update | Actualizar features con otra capa |
+| Spatial Join | Unir atributos basándose en relación espacial |
+
+#### Proximity (Proximidad)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Buffer | Crear zonas de influencia |
+| Multiple Ring Buffer | Buffers de múltiples distancias |
+| Near | Distancia al feature más cercano |
+| Generate Near Table | Tabla de proximidad para múltiples features |
+| Point Distance | Distancias entre puntos |
+| Create Thiessen Polygons | Polígonos de Voronoi |
+
+#### Statistics (Estadísticas)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Summary Statistics | Estadísticas descriptivas |
+| Frequency | Frecuencia de valores |
+| Tabulate Area | Área tabulada por categoría |
+| Zonal Statistics | Estadísticas zonales (raster) |
+
+#### Data Management (Gestión de Datos)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Project | Reproyectar datos |
+| Clip | Recortar por extensión |
+| Dissolve | Disolver por atributos |
+| Merge | Fusionar datasets |
+| Append | Agregar features |
+| Select | Seleccionar por atributos |
+| Sort | Ordenar registros |
+| Add Field / Calculate Field | Gestión de campos |
+| Feature Class To Feature Class | Conversión |
+| Table To Table | Conversión de tablas |
+
+#### Conversion (Conversión)
+| Herramienta | Descripción |
+|-------------|-------------|
+| Feature Class To Shapefile | Exportar a Shapefile |
+| Feature Class To Geodatabase | Exportar a GDB |
+| JSON To Features / Features To JSON | Conversión JSON |
+| Table To Excel / Excel To Table | Conversión Excel |
+| KML To Layer / Layer To KML | Conversión KML |
+| Raster To Polygon / Polygon To Raster | Conversión raster-vector |
+
+---
+
+## 3. Extensiones de Análisis
+
+### 3D Analyst
+Herramientas para análisis tridimensional:
+
+| Toolset | Herramientas Clave |
+|---------|-------------------|
+| **Visibility** | Viewshed, Line of Sight, Skyline, Observer Points |
+| **Surface** | Slope, Aspect, Contour, Cut Fill, Surface Volume |
+| **TIN** | Create TIN, TIN Domain, TIN Edge, TIN Triangle |
+| **Terrain** | Create Terrain, Add Terrain Points |
+| **Raster** | Reclassify, Raster Calculator, Surface Parameters |
+| **3D Features** | Near 3D, Inside 3D, Buffer 3D, Union 3D |
+| **Point Cloud** | Classify LAS, LAS Dataset Statistics, Extract LAS |
+
+#### Análisis Exploratorio 3D (Interactivo):
+- **Line of Sight**: Líneas de visión desde un observador a targets
+- **Viewshed**: Área visible desde un observador con ángulo definido
+- **View Dome**: Partes de una esfera visible desde el centro
+- **Steepest Path**: Camino más empinado desde un punto
+- **Slice**: Cortes temporales con planos de recorte
+- **Cut and Fill**: Desplazamiento volumétrico con superficie planar
+
+### Spatial Analyst
+Herramientas para análisis raster y superficies:
+
+| Toolset | Herramientas Clave |
+|---------|-------------------|
+| **Surface** | Slope, Aspect, Hillshade, Curvature, Viewshed |
+| **Hydrology** | Flow Direction, Flow Accumulation, Watershed, Stream Order |
+| **Interpolation** | IDW, Kriging, Spline, Natural Neighbor, Trend |
+| **Density** | Kernel Density, Point Density, Line Density |
+| **Distance** | Euclidean Distance, Cost Distance, Least Cost Path |
+| **Map Algebra** | Raster Calculator, Con, SetNull |
+| **Extraction** | Extract by Mask, Extract by Attributes, Sample |
+| **Reclassification** | Reclassify, Slice, Lookup |
+| **Overlay** | Weighted Overlay, Weighted Sum, Fuzzy Membership |
+| **Segmentation** | Segment Mean Shift, Train Random Trees Classifier |
+| **Solar Radiation** | Area Solar Radiation, Points Solar Radiation |
+| **Zonal** | Zonal Statistics, Zonal Histogram, Zonal Geometry |
+
+### Network Analyst
+Análisis de redes de transporte:
+
+| Herramienta | Descripción |
+|-------------|-------------|
+| Route | Ruta óptima entre puntos |
+| Closest Facility | Instalación más cercana |
+| Service Area | Áreas de servicio (isócronas) |
+| OD Cost Matrix | Matriz origen-destino |
+| Vehicle Routing Problem | Optimización de flotas |
+| Location-Allocation | Ubicación óptima de instalaciones |
+
+### Image Analyst (ArcGIS Image Analyst)
+| Toolset | Descripción |
+|---------|-------------|
+| Classification | Clasificación supervisada y no supervisada |
+| Change Detection | Detección de cambios multitemporal |
+| Deep Learning | Detección de objetos, clasificación con ML |
+| Motion Imagery | Análisis de video georreferenciado |
+| Multidimensional | Análisis de datos NetCDF, HDF |
+| Ortho Mapping | Procesamiento de imágenes de drones |
+| SAR | Procesamiento de radar de apertura sintética |
+
+### Geostatistical Analyst
+| Herramienta | Descripción |
+|-------------|-------------|
+| Kriging | Interpolación geoestadística |
+| Empirical Bayesian Kriging | Kriging bayesiano empírico |
+| Areal Interpolation | Interpolación areal |
+| GA Layer to Contours | Contornos desde superficies GA |
+
+---
+
+## 4. Python y ArcPy en ArcGIS Pro
+
+### ArcPy - API de Python para ArcGIS
+
+```python
+import arcpy
+
+# Configurar workspace
+arcpy.env.workspace = r"C:\data\myproject.gdb"
+arcpy.env.overwriteOutput = True
+
+# Ejecutar herramienta de geoprocessing
+arcpy.analysis.Buffer(
+    in_features="cities",
+    out_feature_class="cities_buffer",
+    buffer_distance_or_field="10 Kilometers"
+)
+
+# Query con cursor
+with arcpy.da.SearchCursor("cities", ["NAME", "POPULATION", "SHAPE@XY"]) as cursor:
+    for row in cursor:
+        print(f"{row[0]}: {row[1]} - ({row[2][0]}, {row[2][1]})")
+
+# Editar con cursor
+with arcpy.da.UpdateCursor("cities", ["POPULATION"]) as cursor:
+    for row in cursor:
+        row[0] = row[0] * 1.05  # Incrementar 5%
+        cursor.updateRow(row)
+
+# Insertar features
+with arcpy.da.InsertCursor("cities", ["NAME", "POPULATION", "SHAPE@XY"]) as cursor:
+    cursor.insertRow(["New City", 50000, (-117.19, 34.05)])
+```
+
+### Módulos de ArcPy:
+
+#### arcpy.da (Data Access)
+```python
+# Cursores de alto rendimiento
+arcpy.da.SearchCursor(dataset, fields, where_clause, spatial_reference)
+arcpy.da.UpdateCursor(dataset, fields, where_clause)
+arcpy.da.InsertCursor(dataset, fields)
+
+# Tokens de geometría: SHAPE@, SHAPE@XY, SHAPE@TRUECENTROID, SHAPE@X, SHAPE@Y,
+# SHAPE@Z, SHAPE@M, SHAPE@JSON, SHAPE@WKB, SHAPE@WKT, SHAPE@AREA, SHAPE@LENGTH
+# OID@, GLOBALID@
+```
+
+#### arcpy.mp (Mapping)
+```python
+# Trabajar con proyectos, mapas y layouts
+aprx = arcpy.mp.ArcGISProject(r"C:\projects\myproject.aprx")
+map = aprx.listMaps("Map")[0]
+layers = map.listLayers()
+layout = aprx.listLayouts("Layout")[0]
+
+# Exportar
+layout.exportToPDF(r"C:\output\map.pdf")
+layout.exportToPNG(r"C:\output\map.png")
+
+# Publicar
+map.getWebLayerSharingDraft("HOSTING_SERVER", "FEATURE", "My Layer")
+```
+
+#### arcpy.management (Gestión de datos)
+```python
+arcpy.management.CreateFileGDB(r"C:\data", "output.gdb")
+arcpy.management.AddField("cities", "NEW_FIELD", "DOUBLE")
+arcpy.management.CalculateField("cities", "NEW_FIELD", "!POPULATION! * 2", "PYTHON3")
+arcpy.management.Project("cities", "cities_projected", arcpy.SpatialReference(4326))
+arcpy.management.CopyFeatures("cities", r"C:\data\output.gdb\cities_copy")
+```
+
+#### arcpy.conversion
+```python
+arcpy.conversion.FeatureClassToShapefile("cities", r"C:\output")
+arcpy.conversion.JSONToFeatures(r"data.json", "output_features")
+arcpy.conversion.TableToExcel("cities", r"C:\output\cities.xlsx")
+```
+
+#### arcpy.analysis
+```python
+arcpy.analysis.Buffer("cities", "cities_buf", "5 Kilometers")
+arcpy.analysis.Intersect(["layer1", "layer2"], "intersection")
+arcpy.analysis.SpatialJoin("points", "polygons", "points_joined")
+arcpy.analysis.Near("cities", "rivers")
+```
+
+### Script Tools:
+```python
+# Definir parámetros de herramienta
+import arcpy
+
+# Obtener parámetros
+input_fc = arcpy.GetParameterAsText(0)
+buffer_dist = arcpy.GetParameterAsText(1)
+output_fc = arcpy.GetParameterAsText(2)
+
+# Mensajes de progreso
+arcpy.AddMessage("Procesando buffer...")
+arcpy.SetProgressor("step", "Ejecutando análisis...", 0, 100, 10)
+
+# Ejecutar
+arcpy.analysis.Buffer(input_fc, output_fc, buffer_dist)
+
+# Establecer output
+arcpy.SetParameterAsText(2, output_fc)
+arcpy.AddMessage("Proceso completado exitosamente.")
+```
+
+### Python Toolboxes (.pyt):
+```python
+import arcpy
+
+class Toolbox:
+    def __init__(self):
+        self.label = "Mi Toolbox"
+        self.alias = "miToolbox"
+        self.tools = [MiHerramienta]
+
+class MiHerramienta:
+    def __init__(self):
+        self.label = "Mi Herramienta"
+        self.description = "Descripción de la herramienta"
+        self.canRunInBackground = True
+
+    def getParameterInfo(self):
+        param0 = arcpy.Parameter(
+            displayName="Input Features",
+            name="in_features",
+            datatype="GPFeatureLayer",
+            parameterType="Required",
+            direction="Input"
+        )
+        return [param0]
+
+    def execute(self, parameters, messages):
+        in_features = parameters[0].valueAsText
+        arcpy.AddMessage(f"Procesando: {in_features}")
+        # ... lógica aquí
+```
+
+---
+
+## 5. ModelBuilder
+
+### Conceptos:
+- Editor visual de flujos de geoprocessing
+- Modelos son herramientas que se pueden compartir
+- Conecta outputs de una herramienta a inputs de otra
+- Soporta iteradores, variables, precondiciones
+
+### Elementos de ModelBuilder:
+| Elemento | Descripción |
+|----------|-------------|
+| **Tools** (rectángulos amarillos) | Herramientas de geoprocessing |
+| **Variables** (óvalos azules/verdes) | Datos de entrada/salida |
+| **Connectors** (flechas) | Flujo de datos y precondiciones |
+| **Iterators** | For, While, Feature Selection, Row Selection, etc. |
+| **Utilities** | Calculate Value, Collect Values, Get Field Value |
+| **Logical** | If/Else, Stop, Merge Branch |
+
+### Exportar Model a Python:
+- ModelBuilder ribbon → Export → Python Script
+- Genera código Python equivalente
+- **Nota**: Iteradores, Utilities y Logical NO se exportan → agregar equivalente Python manualmente
+
+### Buenas prácticas:
+- Usar variables intermedias para depuración
+- Documentar parámetros del modelo
+- Validar inputs con ToolValidator
+- Usar inline variable substitution: `%variable%`
+
+---
+
+## 6. Geodatabase
+
+### Tipos de Geodatabase:
+| Tipo | Descripción | Uso |
+|------|-------------|-----|
+| **File Geodatabase (.gdb)** | Carpeta de archivos, hasta 1TB por dataset | Desktop, proyectos individuales |
+| **Mobile Geodatabase (.geodatabase)** | SQLite, portable | Offline, mobile |
+| **Enterprise Geodatabase** | RDBMS (SQL Server, PostgreSQL, Oracle) | Multi-usuario, enterprise |
+
+### Elementos de Geodatabase:
+- **Feature Classes**: Colecciones de features (puntos, líneas, polígonos)
+- **Tables**: Tablas de atributos sin geometría
+- **Feature Datasets**: Contenedores de feature classes con misma referencia espacial
+- **Raster Datasets/Catalogs**: Datos raster
+- **Relationship Classes**: Relaciones entre tablas/feature classes
+- **Domains**: Valores válidos (coded values, range)
+- **Subtypes**: Subtipos de features basados en atributo
+- **Topologies**: Reglas topológicas
+- **Geometric Networks / Utility Networks**: Redes
+- **Annotations**: Etiquetas almacenadas como features
+- **Attachments**: Archivos adjuntos a features
+
+---
+
+## 7. Publicación de Servicios desde ArcGIS Pro
+
+### Flujo de Publicación:
+1. Preparar datos en el mapa
+2. Share ribbon → Web Layer o Web Map
+3. Configurar propiedades (nombre, tags, resumen)
+4. Elegir tipo: Feature, Tile, Scene, Image
+5. Seleccionar servidor destino (ArcGIS Online o Enterprise)
+6. Analizar (resolver warnings/errores)
+7. Publicar
+
+### Tipos de Publicación:
+| Tipo | Resultado |
+|------|-----------|
+| Web Feature Layer | Feature Service editable |
+| Web Tile Layer | Map tile cache |
+| Vector Tile Layer | Vector tile package/service |
+| Scene Layer | 3D scene service |
+| Map Image Layer | Dynamic map service |
+| Web Map / Web Scene | Items de portal |
+| Geoprocessing Service | GP service |
+
+### Automatización de Publicación con Python:
+```python
+import arcpy
+
+aprx = arcpy.mp.ArcGISProject(r"C:\project.aprx")
+m = aprx.listMaps("Map")[0]
+
+# Sharing draft
+sharing_draft = m.getWebLayerSharingDraft(
+    "HOSTING_SERVER", "FEATURE", "My Service Name"
+)
+sharing_draft.summary = "Descripción del servicio"
+sharing_draft.tags = "tag1,tag2"
+sharing_draft.overwriteExistingService = True
+
+# Guardar como .sddraft
+sddraft_file = r"C:\output\service.sddraft"
+sharing_draft.exportToSDDraft(sddraft_file)
+
+# Stage
+sd_file = r"C:\output\service.sd"
+arcpy.server.StageService(sddraft_file, sd_file)
+
+# Upload y publicar
+arcpy.server.UploadServiceDefinition(sd_file, "HOSTING_SERVER")
+```
+
+---
+
+## 8. Layouts y Cartografía
+
+### Elementos de Layout:
+- Map Frames (2D y 3D)
+- Legends, Scale Bars, North Arrows
+- Text Elements, Graphics
+- Tables, Charts, Pictures
+- Grids y Graticules
+
+### Exportación:
+- PDF (con capas y atributos opcionalmente)
+- PNG, JPEG, TIFF, SVG, EMF, EPS, BMP, GIF
+- Map Series (Atlas/Data Driven Pages equivalente)
+
+### Map Series:
+```python
+# Exportar Map Series completa
+layout = aprx.listLayouts("Atlas")[0]
+ms = layout.mapSeries
+if ms.enabled:
+    ms.exportToPDF(r"C:\output\atlas.pdf",
+                   "ALL",
+                   resolution=300,
+                   image_quality="BEST")
+```

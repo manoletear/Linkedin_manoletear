@@ -1,0 +1,473 @@
+# ArcGIS REST API & Services - Skill de Conocimiento Completo
+
+## Descripción
+Documentación exhaustiva de todos los REST APIs de ArcGIS, endpoints, parámetros, y patrones de uso para servicios de localización, datos y administración.
+
+---
+
+## 1. Servicios de Localización (Location-Based Services)
+
+### 1.1 Geocoding Service (World Geocoding Service)
+
+**Base URL**: `https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer`
+
+#### findAddressCandidates (Geocodificación directa)
+```
+GET/POST .../findAddressCandidates
+```
+**Parámetros principales:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `singleLine` | string | Dirección completa en una línea |
+| `address` | string | Dirección de calle |
+| `city` | string | Ciudad |
+| `region` | string | Estado/Provincia |
+| `postal` | string | Código postal |
+| `countryCode` | string | ISO 3166-1 (ej: "USA", "ESP", "CHL") |
+| `category` | string | Filtro de categoría (Address, POI, City, etc.) |
+| `location` | string | x,y para sesgar resultados por proximidad |
+| `outFields` | string | Campos a retornar (* para todos) |
+| `outSR` | int | Sistema de referencia de salida (4326=WGS84) |
+| `maxLocations` | int | Máximo de candidatos (default 1) |
+| `magicKey` | string | Key obtenida de suggest para resultados exactos |
+| `f` | string | Formato de respuesta: json, pjson |
+
+**Respuesta:**
+```json
+{
+  "candidates": [{
+    "address": "380 New York St, Redlands, CA 92373",
+    "location": { "x": -117.1956, "y": 34.0572 },
+    "score": 100,
+    "attributes": {
+      "Match_addr": "380 New York St",
+      "Addr_type": "PointAddress",
+      "PlaceName": "", "City": "Redlands",
+      "Region": "California", "Country": "USA"
+    }
+  }]
+}
+```
+
+#### reverseGeocode (Geocodificación inversa)
+```
+GET .../reverseGeocode
+```
+**Parámetros:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `location` | string | x,y coordenadas |
+| `outSR` | int | Sistema de referencia |
+| `langCode` | string | Idioma de resultados (en, es, fr, etc.) |
+| `featureTypes` | string | Tipos: StreetAddress, POI, StreetName, etc. |
+
+#### suggest (Autocompletado)
+```
+GET .../suggest
+```
+**Parámetros:** `text`, `location`, `category`, `countryCode`, `maxSuggestions`
+
+#### geocodeAddresses (Batch Geocoding)
+```
+POST .../geocodeAddresses
+```
+**Body:** `addresses` (JSON array de hasta 1000 direcciones por lote)
+
+---
+
+### 1.2 Routing Service
+
+**Base URL**: `https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer`
+
+#### Route (Ruta punto a punto)
+```
+POST .../Route_World/solve
+```
+**Parámetros principales:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `stops` | JSON | Array de paradas {geometry, attributes} |
+| `barriers` | JSON | Barreras de punto |
+| `polylineBarriers` | JSON | Barreras lineales |
+| `polygonBarriers` | JSON | Barreras poligonales |
+| `returnDirections` | bool | Retornar instrucciones de navegación |
+| `directionsLanguage` | string | Idioma de direcciones (es, en, fr) |
+| `travelMode` | JSON | Modo de viaje (driving, walking, trucking) |
+| `impedanceAttributeName` | string | TravelTime, Miles, Kilometers |
+| `returnRoutes` | bool | Retornar geometría de la ruta |
+| `findBestSequence` | bool | Optimizar orden de paradas |
+| `preserveFirstStop` | bool | Mantener primera parada fija |
+| `preserveLastStop` | bool | Mantener última parada fija |
+
+#### Service Area (Isócronas/Isodistancias)
+```
+POST .../ServiceArea_World/solveServiceArea
+```
+**Parámetros:** `facilities`, `defaultBreaks` (tiempos en min o distancias), `travelDirection`, `travelMode`
+
+#### Closest Facility
+```
+POST .../ClosestFacility_World/solveClosestFacility
+```
+**Parámetros:** `incidents`, `facilities`, `numberOfFacilitiesToFind`, `travelDirection`
+
+#### OD Cost Matrix
+```
+POST .../ODCostMatrix_World/solveODCostMatrix
+```
+
+#### Vehicle Routing Problem (VRP)
+```
+POST .../VehicleRoutingProblem_World/solve
+```
+**Parámetros:** `orders`, `depots`, `routes`, `capacities`, `route_zones`
+
+#### Last Mile Delivery
+Servicio GA para optimización de entregas última milla.
+
+---
+
+### 1.3 Places Service
+
+**Base URL**: `https://places-api.arcgis.com/arcgis/rest/services/places-service/v1`
+
+#### Near Point (Búsqueda por proximidad)
+```
+GET .../places/near-point
+```
+**Parámetros:** `x`, `y`, `radius` (metros), `categoryIds`, `searchText`, `pageSize`
+
+#### Within Extent (Búsqueda por área)
+```
+GET .../places/within-extent
+```
+**Parámetros:** `xmin`, `ymin`, `xmax`, `ymax`, `categoryIds`, `searchText`
+
+#### Place Details
+```
+GET .../places/{placeId}
+```
+**Parámetros:** `requestedFields` (name, address, phone, hours, rating, price, socialMedia, etc.)
+
+#### Categories
+```
+GET .../categories
+```
+
+---
+
+### 1.4 GeoEnrichment Service
+
+**Base URL**: `https://geoenrich.arcgis.com/arcgis/rest/services/World/GeoEnrichmentServer`
+
+#### Enrich
+```
+POST .../GeoEnrichment/enrich
+```
+**Parámetros:**
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `studyAreas` | JSON | Áreas de estudio (punto, polígono, dirección) |
+| `dataCollections` | string | Colecciones de datos (KeyGlobalFacts, Age, Income, etc.) |
+| `analysisVariables` | string | Variables específicas |
+| `studyAreasOptions` | JSON | Tipo de área: RingBuffer, DriveTimeBuffer |
+| `returnGeometry` | bool | Retornar geometría del área |
+| `inSR` / `outSR` | int | Sistemas de referencia |
+
+**Tipos de Study Areas:**
+```json
+// Ring buffer (radio)
+{"studyAreas": [{"geometry": {"x": -117.19, "y": 34.05}, "areaType": "RingBuffer", "bufferUnits": "esriMiles", "bufferRadii": [1, 3, 5]}]}
+
+// Drive time
+{"studyAreas": [{"geometry": {"x": -117.19, "y": 34.05}, "areaType": "DriveTimeBuffer", "bufferUnits": "esriDriveTimeUnitsMinutes", "bufferRadii": [5, 10, 15]}]}
+```
+
+**Data Collections populares:**
+- `KeyGlobalFacts` - Población, hogares, ingresos promedio
+- `Age` - Distribución por edad
+- `Income` - Distribución de ingresos
+- `Education` - Nivel educativo
+- `HouseholdTotals` - Totales de hogares
+- `Policy` - Datos de política
+- `Health` - Datos de salud
+- `Crime` - Datos de criminalidad
+- `Spending` - Patrones de gasto
+
+#### Standard Geography Query
+```
+GET .../StandardGeographyQuery/execute
+```
+Para obtener geografías estándar (países, estados, municipios, códigos postales, etc.)
+
+---
+
+### 1.5 Elevation Service
+
+**Base URL**: `https://elevation-api.arcgis.com/arcgis/rest/services`
+
+#### Get Elevation
+```
+GET .../elevation/get
+Params: lon, lat, units (meters|feet), f=json
+```
+
+#### Profile
+```
+POST .../elevation/profile
+Body: path (coordenadas de línea), units
+```
+
+#### Viewshed
+```
+POST .../elevation/viewshed
+Body: observerPoints, maximumDistance
+```
+
+---
+
+### 1.6 Basemap Styles Service
+
+**Base URL**: `https://basemapstyles-api.arcgis.com/arcgis/rest/services/styles/v2`
+
+#### Get Style
+```
+GET .../styles/{style}
+```
+
+**Estilos disponibles:**
+| Estilo | Descripción |
+|--------|-------------|
+| `arcgis/streets` | Calles detalladas |
+| `arcgis/streets-relief` | Calles con relieve |
+| `arcgis/navigation` | Navegación vehicular |
+| `arcgis/navigation-night` | Navegación nocturna |
+| `arcgis/topographic` | Topográfico |
+| `arcgis/outdoor` | Actividades al aire libre |
+| `arcgis/light-gray` | Fondo gris claro |
+| `arcgis/dark-gray` | Fondo gris oscuro |
+| `arcgis/imagery` | Imágenes satelitales |
+| `arcgis/imagery/standard` | Imagery con etiquetas |
+| `arcgis/oceans` | Océanos |
+| `arcgis/human-geography` | Geografía humana |
+| `arcgis/charted-territory` | Territorio cartografiado |
+| `arcgis/nova` | Estilo Nova oscuro |
+| `osm/standard` | OpenStreetMap estándar |
+| `osm/blueprint` | OSM Blueprint |
+
+### Basemap Places:
+Funcionalidad para mostrar/ocultar POIs en basemaps vectoriales.
+
+---
+
+## 2. Servicios de Datos (Data Services)
+
+### 2.1 Feature Service
+
+**URL Pattern**: `{serviceUrl}/FeatureServer`
+
+#### Operaciones del Service:
+```
+GET .../FeatureServer                    # Info del servicio
+GET .../FeatureServer/{layerId}          # Info de capa
+GET .../FeatureServer/{layerId}/query    # Consultar features
+POST .../FeatureServer/{layerId}/addFeatures
+POST .../FeatureServer/{layerId}/updateFeatures
+POST .../FeatureServer/{layerId}/deleteFeatures
+POST .../FeatureServer/{layerId}/applyEdits  # Operación combinada
+POST .../FeatureServer/{layerId}/addAttachment
+GET .../FeatureServer/{layerId}/queryAttachments
+POST .../FeatureServer/{layerId}/calculateField
+POST .../FeatureServer/{layerId}/generateRenderer
+```
+
+#### Query Parameters:
+| Parámetro | Tipo | Ejemplo |
+|-----------|------|---------|
+| `where` | string | `"POPULATION > 50000"` |
+| `outFields` | string | `"NAME,POPULATION,AREA"` o `"*"` |
+| `geometry` | JSON | `{"xmin":...,"ymin":...,"xmax":...,"ymax":...}` |
+| `geometryType` | string | esriGeometryPoint, esriGeometryEnvelope, esriGeometryPolygon |
+| `spatialRel` | string | esriSpatialRelIntersects, esriSpatialRelContains, esriSpatialRelWithin |
+| `returnGeometry` | bool | true/false |
+| `resultRecordCount` | int | Límite de registros (paginación) |
+| `resultOffset` | int | Offset para paginación |
+| `orderByFields` | string | `"POPULATION DESC"` |
+| `groupByFieldsForStatistics` | string | Campos para agrupar |
+| `outStatistics` | JSON | `[{"statisticType":"sum","onStatisticField":"POP","outStatisticFieldName":"TotalPop"}]` |
+| `returnDistinctValues` | bool | Valores únicos |
+| `returnCountOnly` | bool | Solo retornar conteo |
+| `distance` | double | Distancia de buffer |
+| `units` | string | esriSRUnit_Meter, esriSRUnit_Kilometer |
+
+### 2.2 Vector Tile Service
+```
+GET {serviceUrl}/VectorTileServer
+GET {serviceUrl}/VectorTileServer/resources/styles/root.json  # Style spec (Mapbox)
+GET {serviceUrl}/VectorTileServer/tile/{z}/{y}/{x}.pbf        # Tiles protobuf
+```
+
+### 2.3 Map Tile Service (Raster)
+```
+GET {serviceUrl}/MapServer/tile/{z}/{y}/{x}  # Tiles PNG/JPEG
+GET {serviceUrl}/MapServer/export             # Dynamic image export
+```
+
+### 2.4 Image Service
+```
+GET {serviceUrl}/ImageServer
+GET {serviceUrl}/ImageServer/query
+GET {serviceUrl}/ImageServer/exportImage
+GET {serviceUrl}/ImageServer/identify
+POST {serviceUrl}/ImageServer/computeHistograms
+POST {serviceUrl}/ImageServer/computeStatisticsHistograms
+```
+
+---
+
+## 3. Portal REST API
+
+### 3.1 Content Management
+```
+# Buscar items
+GET /sharing/rest/search?q=title:"my map" AND type:"Web Map"&num=10&f=json
+
+# CRUD de items
+GET /sharing/rest/content/items/{itemId}
+GET /sharing/rest/content/items/{itemId}/data
+POST /sharing/rest/content/users/{username}/addItem
+POST /sharing/rest/content/users/{username}/items/{itemId}/update
+POST /sharing/rest/content/users/{username}/items/{itemId}/delete
+POST /sharing/rest/content/users/{username}/items/{itemId}/share
+
+# Gestión de folders
+POST /sharing/rest/content/users/{username}/createFolder
+GET /sharing/rest/content/users/{username}/{folderId}
+```
+
+### 3.2 User Management
+```
+GET /sharing/rest/community/self         # Usuario actual
+GET /sharing/rest/community/users/{username}
+POST /sharing/rest/portals/self/createUser
+POST /sharing/rest/community/users/{username}/update
+GET /sharing/rest/community/users?q=...
+```
+
+### 3.3 Group Management
+```
+GET /sharing/rest/community/groups/{groupId}
+POST /sharing/rest/community/createGroup
+POST /sharing/rest/community/groups/{groupId}/update
+GET /sharing/rest/content/groups/{groupId}
+POST /sharing/rest/community/groups/{groupId}/invite
+```
+
+### 3.4 Organization/Portal
+```
+GET /sharing/rest/portals/self           # Info del portal
+POST /sharing/rest/portals/self/update   # Actualizar configuración
+GET /sharing/rest/portals/self/users     # Usuarios de la org
+```
+
+---
+
+## 4. Geoprocessing Services
+
+### Ejecución Sincrónica
+```
+POST {serviceUrl}/GPServer/{taskName}/execute
+Params: Parámetros de entrada específicos de la tarea
+Response: { results: [{paramName, dataType, value}] }
+```
+
+### Ejecución Asincrónica
+```
+# 1. Submit job
+POST {serviceUrl}/GPServer/{taskName}/submitJob
+Response: { jobId, jobStatus: "esriJobSubmitted" }
+
+# 2. Check status
+GET {serviceUrl}/GPServer/{taskName}/jobs/{jobId}
+Response: { jobStatus: "esriJobSucceeded" | "esriJobFailed" | "esriJobExecuting" }
+
+# 3. Get results
+GET {serviceUrl}/GPServer/{taskName}/jobs/{jobId}/results/{outputParamName}
+```
+
+### Tipos de datos GP:
+- GPFeatureRecordSetLayer, GPRecordSet, GPString, GPDouble, GPLong
+- GPBoolean, GPDate, GPLinearUnit, GPDataFile, GPRasterDataLayer
+
+---
+
+## 5. Geometry Service
+
+**URL**: `{serverUrl}/Utilities/Geometry/GeometryServer`
+
+### Operaciones:
+```
+POST .../project          # Reproyectar geometrías
+POST .../buffer           # Crear buffers
+POST .../intersect        # Intersección
+POST .../union            # Unión
+POST .../difference       # Diferencia
+POST .../cut              # Cortar
+POST .../simplify         # Simplificar
+POST .../convexHull       # Envolvente convexa
+POST .../areas            # Calcular áreas
+POST .../lengths          # Calcular longitudes
+POST .../distance         # Calcular distancia
+POST .../relation         # Evaluar relaciones espaciales
+POST .../densify          # Densificar
+POST .../generalize       # Generalizar
+POST .../labelPoints      # Puntos de etiqueta
+POST .../reshape          # Remodelar
+POST .../trimExtend       # Recortar/Extender
+POST .../offset           # Desplazar
+POST .../autoComplete     # Autocompletar polígonos
+```
+
+---
+
+## 6. Notas Importantes
+
+### Límites de Request:
+- **GET URLs**: Límite de 1,024 caracteres en algunos servidores → usar POST para payloads grandes
+- **Batch Geocoding**: Máximo 1,000 direcciones por lote
+- **Feature Query**: Usar paginación con `resultRecordCount` y `resultOffset`
+- **Export Map**: Tamaño máximo de imagen depende de la configuración del servidor
+
+### Formato de Geometrías:
+```json
+// Punto
+{"x": -117.19, "y": 34.05, "spatialReference": {"wkid": 4326}}
+
+// Polilínea
+{"paths": [[[-117.19, 34.05], [-117.20, 34.06]]], "spatialReference": {"wkid": 4326}}
+
+// Polígono
+{"rings": [[[-117.19, 34.05], [-117.20, 34.06], [-117.18, 34.06], [-117.19, 34.05]]], "spatialReference": {"wkid": 4326}}
+
+// Envelope
+{"xmin": -117.20, "ymin": 34.04, "xmax": -117.18, "ymax": 34.06, "spatialReference": {"wkid": 4326}}
+
+// Multipoint
+{"points": [[-117.19, 34.05], [-117.20, 34.06]], "spatialReference": {"wkid": 4326}}
+```
+
+### Spatial References comunes:
+| WKID | Nombre | Uso |
+|------|--------|-----|
+| 4326 | WGS 84 (Geographic) | GPS, datos globales |
+| 3857 | Web Mercator | Web maps, tiles |
+| 102100 | Web Mercator Auxiliary Sphere | Alias de 3857 en ArcGIS |
+
+### Tokens en requests:
+```
+# Como query parameter
+GET {serviceUrl}/query?where=1=1&f=json&token={access_token}
+
+# Como header HTTP
+Authorization: Bearer {access_token}
+```

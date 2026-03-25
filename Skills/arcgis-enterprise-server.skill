@@ -1,0 +1,448 @@
+# ArcGIS Enterprise & Server - Skill de Conocimiento Completo
+
+## Descripción
+Conocimiento completo de la arquitectura, despliegue, administración y configuración de ArcGIS Enterprise, incluyendo ArcGIS Server, Portal for ArcGIS, ArcGIS Data Store y extensiones.
+
+---
+
+## 1. Arquitectura de ArcGIS Enterprise
+
+### Componentes del Base Deployment:
+
+| Componente | Función |
+|------------|---------|
+| **Portal for ArcGIS** | Website portal para crear, gestionar, compartir contenido GIS |
+| **ArcGIS Server** | Motor de servicios GIS (hosting server + federated servers) |
+| **ArcGIS Data Store** | Almacén de datos gestionado (relacional, tile cache, spatiotemporal, graph, object) |
+| **ArcGIS Web Adaptor** | Proxy inverso para integración con web servers (IIS/Java) |
+
+### Diagrama de Arquitectura Base:
+```
+[Usuarios] → [Web Adaptor (Portal)] → [Portal for ArcGIS]
+                                              ↕ (federación)
+[Usuarios] → [Web Adaptor (Server)] → [ArcGIS Server (Hosting)]
+                                              ↕
+                                       [ArcGIS Data Store]
+```
+
+### Requisitos Mínimos:
+- **RAM**: 16 GB mínimo (máquina única)
+- **Disco**: 20 GB disponibles mínimo
+- **Puerto 80**: HTTP habilitado
+- **Puerto 7443**: Comunicación interna portal-server
+- **Certificado TLS**: Requerido para HTTPS
+- **Sistemas Operativos**: Windows Server, Red Hat, Ubuntu, SUSE
+
+---
+
+## 2. Instalación y Despliegue
+
+### Opciones de Despliegue:
+
+#### Single Machine (All-in-One)
+- Todos los componentes en una máquina
+- Ideal para desarrollo, testing, organizaciones pequeñas
+- **ArcGIS Enterprise Builder**: Instalador unificado (Windows)
+
+#### Multi-Machine
+- Componentes distribuidos en múltiples máquinas
+- Separar hosting server de portal
+- Data Store en máquina dedicada (recomendado)
+
+#### High Availability (HA)
+- Portal: 2 máquinas en configuración HA
+- Server: 2+ máquinas en site
+- Data Store: Primary + Standby (replicación automática)
+- Diseñado para un solo data center/cloud region
+- NO diseñado para multi-data center
+
+### Proceso de Instalación Manual:
+
+1. **Instalar ArcGIS Server**
+   ```
+   - Ejecutar setup
+   - Crear site o unirse a existente
+   - Configurar ArcGIS Server Administrator Directory
+   - Autorizar licencia
+   ```
+
+2. **Instalar Portal for ArcGIS**
+   ```
+   - Ejecutar setup
+   - Crear portal o unirse a existente
+   - Configurar licencia y user types
+   - Crear cuenta de administrador inicial
+   ```
+
+3. **Instalar ArcGIS Data Store**
+   ```
+   - Ejecutar setup
+   - Configurar con hosting server
+   - Crear relational data store
+   - Crear object store
+   ```
+
+4. **Instalar ArcGIS Web Adaptor**
+   ```
+   - Instalar en web server (IIS o Java app server)
+   - Configurar uno para Portal
+   - Configurar otro para Server
+   ```
+
+5. **Federar Server con Portal**
+   ```
+   - Portal Admin → Servers → Add
+   - Proporcionar Admin URL y Web Adaptor URL del server
+   - Designar como Hosting Server
+   ```
+
+---
+
+## 3. Federación
+
+### Concepto:
+La federación conecta un ArcGIS Server site con un Portal, unificando la seguridad y el control de acceso.
+
+### Efectos de la Federación:
+- **Seguridad unificada**: El portal controla todo el acceso al server
+- **Roles del portal** reemplazan roles del server (viewer, user, publisher, admin, custom)
+- **Servicios existentes** se convierten en items del portal automáticamente
+- **Single sign-on** entre portal y server
+
+### Tipos de Server Roles:
+
+| Rol | Descripción |
+|-----|-------------|
+| **Hosting Server** | Servidor principal que aloja hosted layers. Solo puede haber uno |
+| **Federated Server** | Server adicional para servicios publicados con datos propios |
+| **GeoAnalytics Server** | Análisis de big data espacial |
+| **Raster Analytics Server** | Análisis de imágenes distribuido |
+| **GeoEvent Server** | Procesamiento de datos en tiempo real |
+| **Notebook Server** | Jupyter notebooks para ciencia de datos |
+| **Mission Server** | Operaciones de misión/tácticas |
+| **Knowledge Server** | Grafos de conocimiento |
+| **Workflow Manager Server** | Gestión de flujos de trabajo |
+
+### Proceso de Federación:
+```
+1. Portal website → Organization → Settings → Servers
+2. Add Server:
+   - Services URL: https://webadaptor.domain.com/server
+   - Administration URL: https://servername.domain.com:6443/arcgis
+   - Credentials: ArcGIS Server admin username/password
+3. Designar como Hosting Server (opcional)
+```
+
+### Requisitos:
+- Server debe tener acceso directo al portal por puerto 7443
+- Certificado TLS del server debe ser confiable para el portal (o contener hostname en CN/SAN)
+- No usar forward proxy entre server y portal
+
+### Desfederar:
+- **Precaución**: Si el hosting server es desfederado, todos los hosted layers quedan inutilizables
+- Refederar NO restaura los hosted services
+- Solo desfederar si ya no se necesitan los servicios
+
+---
+
+## 4. ArcGIS Data Store
+
+### Tipos de Data Store:
+
+| Tipo | Función | Datos que almacena |
+|------|---------|-------------------|
+| **Relational** | Base de datos relacional | Hosted feature layers |
+| **Tile Cache** | Cache de tiles | Scene layers, caches de tiles |
+| **Spatiotemporal** | Big data temporal | Datos de GeoAnalytics, archiving |
+| **Graph** | Grafo | Knowledge graphs |
+| **Object** | Almacén de objetos | Caches de vector tiles, imágenes |
+
+### High Availability:
+- **Relational**: Primary + Standby con replicación automática
+- **Tile Cache**: 2+ máquinas
+- **Spatiotemporal**: 3+ máquinas (cluster)
+
+### Administración:
+```bash
+# Herramienta de línea de comando
+describedatastore    # Estado del data store
+configuredatastore   # Configurar con hosting server
+changedatastoremode  # Cambiar modo (readonly, etc.)
+backupdatastore      # Backup manual
+restoredatastore     # Restaurar desde backup
+listbackups          # Listar backups
+listmanageduser      # Ver usuario gestionado
+```
+
+---
+
+## 5. User-Managed Data Stores
+
+### Concepto:
+Conexiones a bases de datos y almacenes de datos que el usuario administra, diferentes a ArcGIS Data Store.
+
+### Tipos Soportados:
+- Bases de datos empresariales (SQL Server, PostgreSQL, Oracle, SAP HANA)
+- File shares (carpetas compartidas)
+- Cloud stores (Amazon S3, Azure Blob, Google Cloud)
+
+### Registro:
+```
+# Desde Portal o desde Server Manager
+1. Crear Data Store item en portal
+2. Proporcionar connection string / credentials
+3. Registrar con uno o más federated servers
+4. Los datos no se copian - los servicios referencian directamente
+```
+
+### Publicación con Datos Registrados:
+- Los servicios referencian datos in-situ
+- No se copia data al hosting server
+- Ideal para datos empresariales existentes
+
+---
+
+## 6. ArcGIS Server - Administración
+
+### Server Manager (Web UI):
+- URL: `https://servername.domain.com:6443/arcgis/manager`
+- Gestionar servicios (start, stop, delete)
+- Monitorear uso y rendimiento
+- Configurar logs y diagnostics
+
+### Admin REST API:
+```
+Base URL: https://servername:6443/arcgis/admin
+
+# Servicios
+GET  /services                          # Listar servicios
+GET  /services/{folder}/{serviceName}.{type}  # Info del servicio
+POST /services/{folder}/{serviceName}.{type}/start
+POST /services/{folder}/{serviceName}.{type}/stop
+POST /services/{folder}/{serviceName}.{type}/delete
+POST /services/createService            # Crear servicio
+
+# Machines
+GET  /machines                          # Listar máquinas del site
+POST /machines/{machineName}/start
+POST /machines/{machineName}/stop
+
+# Logs
+GET  /logs/query                        # Consultar logs
+POST /logs/settings/edit                # Configurar logging
+
+# Data
+GET  /data/items                        # Data stores registrados
+POST /data/registerItem                 # Registrar data store
+POST /data/validateDataItem             # Validar conexión
+
+# Security
+GET  /security/config                   # Configuración de seguridad
+POST /security/roles/add                # Agregar rol
+POST /security/users/add                # Agregar usuario
+
+# Cluster
+GET  /clusters                          # Info del cluster
+POST /clusters/{clusterName}/machines/add
+POST /clusters/{clusterName}/machines/remove
+
+# System
+GET  /system/properties                 # Propiedades del sistema
+GET  /system/directories                # Directorios del sistema
+POST /system/directories/register       # Registrar directorio
+```
+
+### Configuración de Servicios:
+```json
+{
+  "serviceName": "MyService",
+  "type": "MapServer",
+  "capabilities": "Map,Query,Data",
+  "maxInstancesPerNode": 4,
+  "minInstancesPerNode": 1,
+  "maxWaitTime": 60,
+  "maxStartupTime": 300,
+  "maxIdleTime": 1800,
+  "maxUsageTime": 600,
+  "recyclingInterval": 24,
+  "loadBalancing": "ROUND_ROBIN",
+  "isolationLevel": "HIGH",
+  "properties": {
+    "maxRecordCount": "1000",
+    "enableDynamicLayers": "true"
+  }
+}
+```
+
+---
+
+## 7. Portal for ArcGIS - Administración
+
+### Portal Admin API:
+```
+Base URL: https://portalhost:7443/arcgis/portaladmin
+
+# Organization
+GET  /                                # Info del portal
+POST /security/config/update          # Configurar seguridad
+
+# Federation
+GET  /federation/servers              # Servidores federados
+POST /federation/servers/register     # Registrar servidor
+POST /federation/servers/unregister   # Desregistrar servidor
+
+# Users
+GET  /security/users                  # Listar usuarios
+POST /security/users/createUser       # Crear usuario
+POST /security/users/{username}/update
+
+# Content
+GET  /search                          # Buscar contenido
+POST /content/users/{username}/addItem
+
+# System
+GET  /system/properties               # Propiedades
+POST /system/properties/update        # Actualizar propiedades
+GET  /system/directories              # Directorios
+POST /system/indexer/reindex          # Reindexar contenido
+
+# Logs
+GET  /logs/query                      # Consultar logs
+POST /logs/settings/edit              # Configurar logs
+
+# License
+GET  /system/licenses                 # Info de licencias
+POST /system/licenses/updateLicense   # Actualizar licencia
+```
+
+### Configuración del Portal:
+| Configuración | Descripción |
+|--------------|-------------|
+| **Identity Store** | Built-in, LDAP, Active Directory, SAML |
+| **Security** | HTTPS, CORS, tokens, trusted servers |
+| **Basemaps** | Galería de basemaps por defecto |
+| **Default Map Viewer** | Map Viewer vs Map Viewer Classic |
+| **Utility Services** | Geocoding, routing, print, geometry |
+| **Home Page** | Personalización de la página de inicio |
+| **Sharing** | Niveles de compartición (org, público) |
+| **Credits** | Asignación de créditos por usuario |
+
+---
+
+## 8. Escalabilidad y Performance
+
+### Scaling Out:
+- **ArcGIS Server**: Agregar máquinas al site para más capacidad
+- **Portal**: Máximo 2 máquinas en HA
+- **Data Store**: Standby para relacional; cluster para spatiotemporal
+
+### Optimización:
+| Área | Recomendación |
+|------|---------------|
+| **Feature Services** | Configurar `maxRecordCount`, índices espaciales y de atributos |
+| **Map Services** | Usar caching (tile layers) para mapas estáticos |
+| **Geoprocessing** | Async para tareas largas; ajustar max instances |
+| **Data Store** | Máquinas dedicadas (no compartir con Server) |
+| **Web Adaptor** | Load balancer frente a múltiples web adaptors |
+| **Logs** | Nivel WARNING en producción (no FINE/VERBOSE) |
+
+### Monitoring:
+- Server Manager dashboards
+- ArcGIS Monitor (producto separado)
+- Admin API para métricas programáticas
+- Log queries para diagnóstico
+
+---
+
+## 9. Extensiones del Server
+
+### ArcGIS GeoEvent Server
+- Procesamiento de datos en tiempo real
+- Conectores: TCP, HTTP, WebSocket, Kafka, MQTT, RabbitMQ
+- Inputs → Processors → Outputs
+- Geofencing, tracking, alertas
+
+### ArcGIS GeoAnalytics Server
+- Análisis de big data espacial distribuido
+- Herramientas: aggregate, join, find hot spots, detect incidents
+- Procesa millones de registros
+
+### ArcGIS Image Server
+- Servicio de imágenes y raster analytics
+- Procesamiento distribuido de imágenes
+- Raster functions y raster analytics
+
+### ArcGIS Notebook Server
+- Jupyter notebooks en el enterprise
+- Python + ArcGIS API for Python
+- Ejecución programada de notebooks
+
+### ArcGIS Knowledge Server
+- Knowledge graphs (grafos de conocimiento)
+- Investigación y análisis de entidades/relaciones
+- Integración con ArcGIS AllSource
+
+### ArcGIS Workflow Manager Server
+- Gestión de flujos de trabajo empresariales
+- Asignación de tareas, tracking de progreso
+- Integración con Portal
+
+---
+
+## 10. Backup y Disaster Recovery
+
+### Estrategia de Backup:
+```bash
+# Portal
+# Herramienta webgisdr para backup completo
+webgisdr --export --file /backups/portal_backup.json
+
+# ArcGIS Data Store
+backupdatastore /path/to/backup --store relational
+backupdatastore /path/to/backup --store tilecache
+
+# ArcGIS Server
+# Exportar site configuration
+POST https://server:6443/arcgis/admin/exportSite
+```
+
+### Componentes a respaldar:
+1. Portal content database
+2. Portal configuration
+3. ArcGIS Data Store (todos los tipos)
+4. ArcGIS Server site configuration
+5. Certificados SSL
+6. Bases de datos empresariales (user-managed)
+7. Archivos de datos registrados
+
+### webgisdr Utility:
+```bash
+# Exportar (backup completo del deployment)
+webgisdr --export
+
+# Importar (restaurar)
+webgisdr --import --file /backups/backup_file
+
+# Configuración en webgisdr.properties:
+PORTAL_ADMIN_URL=https://portal:7443/arcgis
+PORTAL_ADMIN_USERNAME=admin
+PORTAL_ADMIN_PASSWORD=encrypted_password
+BACKUP_RESTORE_MODE=backup
+SHARED_LOCATION=\\fileserver\backups
+INCLUDE_SCENE_TILE_CACHES=true
+```
+
+---
+
+## 11. URLs de Referencia
+
+| Recurso | URL |
+|---------|-----|
+| Enterprise docs | https://enterprise.arcgis.com/en/ |
+| Installation guide | https://enterprise.arcgis.com/en/documentation/install/ |
+| Server deployment | https://enterprise.arcgis.com/en/server/latest/deploy/ |
+| Portal admin | https://enterprise.arcgis.com/en/portal/latest/administer/ |
+| Data Store | https://enterprise.arcgis.com/en/data-store/latest/ |
+| Web Adaptor | https://enterprise.arcgis.com/en/web-adaptor/ |
+| Server REST API | https://developers.arcgis.com/rest/services-reference/enterprise/ |
+| Portal REST API | https://developers.arcgis.com/rest/users-groups-and-items/ |

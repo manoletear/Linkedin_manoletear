@@ -1,0 +1,141 @@
+# ArcGIS Platform Overview - Skill de Conocimiento Completo
+
+## Descripción
+Conocimiento integral de la plataforma ArcGIS de Esri, incluyendo todos sus productos, servicios, arquitectura y ecosistema completo de herramientas GIS.
+
+---
+
+## 1. ¿Qué es ArcGIS?
+
+ArcGIS es la plataforma líder mundial de Sistemas de Información Geográfica (GIS) desarrollada por Esri. Permite crear, gestionar, analizar, compartir y visualizar datos geoespaciales. Es utilizada por gobiernos, empresas, organizaciones y desarrolladores en todo el mundo.
+
+### Componentes Principales del Ecosistema ArcGIS:
+
+| Categoría | Productos |
+|-----------|-----------|
+| **Cloud GIS** | ArcGIS Online, ArcGIS Location Platform |
+| **Enterprise GIS** | ArcGIS Enterprise (Server + Portal + Data Store) |
+| **Desktop GIS** | ArcGIS Pro, ArcGIS AllSource |
+| **Mobile/Field** | ArcGIS Field Maps, ArcGIS Survey123, ArcGIS QuickCapture |
+| **App Builders** | ArcGIS Experience Builder, ArcGIS Instant Apps, ArcGIS StoryMaps, ArcGIS Dashboards |
+| **Developer SDKs** | Maps SDK for JavaScript, Python API, Kotlin, Swift, Flutter, .NET, Qt, Java |
+| **Análisis** | ArcGIS Spatial Analyst, 3D Analyst, Network Analyst, Geostatistical Analyst, Image Analyst |
+| **Data Science** | ArcGIS Notebooks, ArcGIS Insights |
+| **Datos** | ArcGIS Living Atlas of the World, ArcGIS Data Appliance |
+| **Tiempo Real** | ArcGIS GeoEvent Server, ArcGIS Velocity |
+| **Indoors** | ArcGIS Indoors, ArcGIS IPS |
+
+---
+
+## 2. ArcGIS Location Platform
+
+Plataforma orientada a desarrolladores que proporciona servicios de localización como servicio (LaaS):
+
+### Servicios Disponibles:
+- **Basemaps**: Estilos de mapas vectoriales y raster (streets, satellite, topographic, navigation, outdoor, etc.)
+- **Geocoding**: Búsqueda de direcciones, geocodificación directa e inversa, batch geocoding, autocompletado
+- **Routing**: Direcciones turn-by-turn, rutas óptimas, matrices origen-destino, áreas de servicio, problemas de rutas de vehículos (VRP), Last Mile Delivery
+- **Places**: Búsqueda de negocios, POI, y lugares con detalles
+- **GeoEnrichment**: Datos demográficos, datos de consumo, +15,000 variables para +150 países
+- **Elevation**: Valores de elevación, perfiles, cuencas visuales, líneas de visión, trazado de flujo de agua
+- **Spatial Analysis**: Análisis de proximidad, patrones, enriquecimiento, resumen de datos
+
+### Autenticación y Acceso:
+- **API Key Authentication**: Tokens de larga duración para apps públicas (hasta 1 año)
+- **User Authentication (OAuth 2.0)**: Tokens de corta duración para apps privadas con login de usuario
+- **App Authentication (OAuth 2.0)**: Client ID + Client Secret para apps servidor-a-servidor
+
+### Pricing Model:
+- Basado en transacciones/consumo
+- Basemap Sessions: tarifa única por sesión ilimitada de tiles
+- Free tier disponible para desarrollo y testing
+
+---
+
+## 3. ArcGIS Online
+
+Portal cloud SaaS de Esri para crear, compartir y gestionar contenido GIS:
+
+### Funcionalidades Principales:
+- **Map Viewer**: Editor visual de mapas web 2D con herramientas de análisis
+- **Scene Viewer**: Visualización 3D en el navegador
+- **Content Management**: Gestión de items (mapas, capas, apps, archivos)
+- **Hosted Layers**: Feature layers, tile layers, scene layers, imagery layers, vector tile layers
+- **Groups & Sharing**: Compartir contenido con grupos, organización o público
+- **Administration**: Gestión de usuarios, roles, créditos, seguridad
+- **Analysis Tools**: Herramientas de análisis espacial integradas
+
+### Tipos de Hosted Layers:
+| Tipo | Descripción | Uso |
+|------|-------------|-----|
+| Feature Layer | Datos vectoriales editables (puntos, líneas, polígonos) | Visualización, edición, consultas |
+| Vector Tile Layer | Tiles vectoriales con estilos | Basemaps personalizados, rendimiento |
+| Map Tile Layer | Tiles raster pre-renderizados (PNG) | Mapas estáticos rápidos |
+| Scene Layer | Datos 3D (edificios, mesh, nubes de puntos) | Visualización 3D |
+| Imagery Layer | Datos raster/imagery | Análisis de imágenes, remote sensing |
+
+### Portal Service API:
+- **Items**: Crear, almacenar, gestionar y acceder items
+- **Users**: Buscar usuarios y gestionar contenido
+- **Groups**: Crear, buscar y gestionar grupos
+- **Search**: Consultar contenido público y privado
+- **Sharing**: Controlar acceso y permisos
+
+---
+
+## 4. Flujos de Trabajo Principales
+
+### Data Publishing (Hosting de Datos):
+1. Subir datos (CSV, Shapefile, GeoJSON, File Geodatabase, etc.)
+2. Se crea automáticamente un Feature Service
+3. Opcionalmente crear tiles (vector o raster) desde feature layers
+4. Compartir vía URL del servicio o item ID
+
+### Desarrollo de Aplicaciones:
+1. Elegir SDK/API (JavaScript, Python, Native, etc.)
+2. Configurar autenticación (API Key o OAuth 2.0)
+3. Acceder a servicios de localización y datos
+4. Construir UI con componentes/widgets del SDK
+
+### Análisis Espacial:
+1. Preparar datos (feature layers, rasters)
+2. Ejecutar herramientas de análisis (overlay, proximity, statistics, enrichment)
+3. Visualizar resultados en mapas/dashboards
+4. Compartir insights
+
+---
+
+## 5. URLs de Referencia Principales
+
+| Recurso | URL |
+|---------|-----|
+| Documentación general | https://doc.arcgis.com/en/ |
+| Documentación desarrolladores | https://developers.arcgis.com/documentation/ |
+| ArcGIS Pro docs | https://pro.arcgis.com/en/pro-app/latest/ |
+| ArcGIS Enterprise docs | https://enterprise.arcgis.com/en/ |
+| ArcGIS Online help | https://doc.arcgis.com/en/arcgis-online/ |
+| REST APIs | https://developers.arcgis.com/rest/ |
+| JavaScript SDK | https://developers.arcgis.com/javascript/latest/ |
+| Python API | https://developers.arcgis.com/python/latest/ |
+| Kotlin SDK | https://developers.arcgis.com/kotlin/ |
+| Swift SDK | https://developers.arcgis.com/swift/ |
+| Flutter SDK | https://developers.arcgis.com/flutter/ |
+| .NET SDK | https://developers.arcgis.com/net/ |
+| Qt SDK | https://developers.arcgis.com/qt/ |
+| Security & Auth | https://developers.arcgis.com/documentation/security-and-authentication/ |
+| Living Atlas | https://livingatlas.arcgis.com/ |
+
+---
+
+## 6. Novedades 2025-2026
+
+- **ArcGIS Pro 3.7**: Migración a .NET 10 (LTS), planificado Q2 2026
+- **Basemap Sessions**: Nuevo modelo de pricing por sesión (no por tiles)
+- **Snap to Roads**: Alineación automática de datos GPS con geometrías de carreteras
+- **Batch Geocoding GA**: Servicio de geocodificación por lotes salió de beta
+- **Last Mile Delivery GA**: Servicio de entrega última milla salió de beta
+- **ArcGIS Elevation Service**: Nueva API ligera para valores de elevación
+- **AI Components (beta)**: Componentes de IA para apps web con chat de lenguaje natural
+- **SelectionManager (beta)**: Gestión de selección de features cross-layer
+- **Legacy API Keys**: Se deprecan en junio 2026 - migrar a nuevas API keys
+- **Open Basemap Vector Basemaps**: Reemplazarán OSM Vector Basemaps en Data Appliance 2026
