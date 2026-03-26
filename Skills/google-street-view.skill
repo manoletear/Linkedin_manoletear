@@ -1,0 +1,659 @@
+# Google Street View - Skill Esencial Completo
+
+## Descripción
+Conocimiento completo de todas las APIs de Google Street View: JavaScript API, Static API, Tiles API, y Publish API. Incluye clases, métodos, parámetros, eventos, ejemplos de código y patrones de uso.
+
+---
+
+## 1. Ecosistema de APIs de Street View
+
+| API | Descripción | Uso Principal |
+|-----|-------------|---------------|
+| **Maps JavaScript API (Street View)** | Panoramas interactivos embebidos en web | Apps web interactivas |
+| **Street View Static API** | Imágenes estáticas de Street View vía URL | Thumbnails, reportes, emails |
+| **Map Tiles API (Street View Tiles)** | Tiles de alta resolución para renderizadores custom | Visores personalizados |
+| **Street View Publish API** | Subir fotos 360° a Google Maps | Contribuir fotografías |
+
+---
+
+## 2. Maps JavaScript API - Street View Service
+
+### 2.1 StreetViewPanorama (Clase Principal)
+
+Muestra un panorama de Street View para una ubicación dada. Puede ser standalone o vinculado a un Map.
+
+```javascript
+// Importar la librería
+const { StreetViewPanorama } = await google.maps.importLibrary("streetView");
+
+// Crear panorama standalone
+const panorama = new google.maps.StreetViewPanorama(
+  document.getElementById("street-view"), {
+    position: { lat: -33.4078, lng: -70.5755 },  // Av. Kennedy 7100
+    pov: {
+      heading: 90,   // Dirección: 0=Norte, 90=Este, 180=Sur, 270=Oeste
+      pitch: 0        // Inclinación: -90=abajo, 0=horizontal, 90=arriba
+    },
+    zoom: 1,           // 0=más alejado, 5=más cercano
+    visible: true
+  }
+);
+```
+
+### Constructor Options:
+
+| Opción | Tipo | Descripción |
+|--------|------|-------------|
+| `position` | `LatLng` | Ubicación del panorama |
+| `pov` | `StreetViewPov` | Punto de vista (heading + pitch) |
+| `zoom` | `number` | Nivel de zoom (0-5, default=1, 90° de arco) |
+| `visible` | `boolean` | Si el panorama es visible |
+| `pano` | `string` | ID del panorama específico |
+| `linksControl` | `boolean` | Mostrar links de navegación |
+| `panControl` | `boolean` | Mostrar control de paneo |
+| `zoomControl` | `boolean` | Mostrar control de zoom |
+| `fullscreenControl` | `boolean` | Botón de pantalla completa |
+| `enableCloseButton` | `boolean` | Botón de cerrar |
+| `addressControl` | `boolean` | Mostrar dirección |
+| `addressControlOptions` | `object` | Opciones de posición del control de dirección |
+| `motionTracking` | `boolean` | Tracking de movimiento (móvil) |
+| `motionTrackingControl` | `boolean` | Control de motion tracking |
+| `scrollwheel` | `boolean` | Zoom con rueda del mouse |
+| `clickToGo` | `boolean` | Click para moverse |
+| `disableDefaultUI` | `boolean` | Desactivar toda la UI por defecto |
+| `imageDateControl` | `boolean` | Mostrar fecha de la imagen |
+
+### StreetViewPov (Punto de Vista):
+
+```javascript
+{
+  heading: number,  // 0-360 grados (brújula)
+                    // 0/360 = Norte, 90 = Este, 180 = Sur, 270 = Oeste
+  pitch: number     // -90 a 90 grados
+                    // -90 = mirando abajo, 0 = horizontal, 90 = mirando arriba
+}
+```
+
+### Métodos Principales:
+
+```javascript
+// Obtener datos
+panorama.getPano()         // String: ID del panorama actual
+panorama.getPosition()     // LatLng: posición actual
+panorama.getPov()          // StreetViewPov: punto de vista actual
+panorama.getZoom()         // number: zoom actual
+panorama.getLinks()        // Array<StreetViewLink>: enlaces de navegación
+panorama.getVisible()      // boolean: si es visible
+panorama.getStatus()       // StreetViewStatus: estado
+
+// Establecer datos
+panorama.setPano(panoId)           // Establecer panorama por ID
+panorama.setPosition(latLng)       // Mover a posición
+panorama.setPov({heading, pitch})  // Cambiar punto de vista
+panorama.setZoom(zoom)             // Cambiar zoom
+panorama.setVisible(boolean)       // Mostrar/ocultar
+panorama.setOptions(options)       // Actualizar múltiples opciones
+
+// Custom panoramas
+panorama.registerPanoProvider(provider)  // Registrar proveedor custom
+```
+
+### Eventos:
+
+```javascript
+// Cambio de panorama
+panorama.addListener("pano_changed", () => {
+  const panoId = panorama.getPano();
+  console.log("Panorama ID:", panoId);
+});
+
+// Cambio de posición
+panorama.addListener("position_changed", () => {
+  const pos = panorama.getPosition();
+  console.log("Posición:", pos.lat(), pos.lng());
+});
+
+// Cambio de punto de vista (heading/pitch)
+panorama.addListener("pov_changed", () => {
+  const pov = panorama.getPov();
+  console.log("Heading:", pov.heading, "Pitch:", pov.pitch);
+});
+
+// Cambio de links de navegación
+panorama.addListener("links_changed", () => {
+  const links = panorama.getLinks();
+  links.forEach(link => {
+    console.log("Link:", link.description, "heading:", link.heading, "pano:", link.pano);
+  });
+});
+
+// Cambio de visibilidad
+panorama.addListener("visible_changed", () => {
+  console.log("Visible:", panorama.getVisible());
+});
+
+// Cambio de zoom
+panorama.addListener("zoom_changed", () => {
+  console.log("Zoom:", panorama.getZoom());
+});
+
+// Estado (carga)
+panorama.addListener("status_changed", () => {
+  console.log("Status:", panorama.getStatus());
+});
+```
+
+---
+
+### 2.2 StreetViewService (Búsqueda de Datos)
+
+Busca datos de Street View sin mostrar el panorama.
+
+```javascript
+const { StreetViewService, StreetViewStatus } =
+  await google.maps.importLibrary("streetView");
+
+const service = new StreetViewService();
+
+// Buscar por ubicación
+const response = await service.getPanorama({
+  location: { lat: -33.4078, lng: -70.5755 },
+  radius: 50,           // Radio de búsqueda en metros
+  source: google.maps.StreetViewSource.OUTDOOR  // Solo exteriores
+});
+
+if (response.data.location) {
+  const panoId = response.data.location.pano;
+  const latLng = response.data.location.latLng;
+  const description = response.data.location.description;
+  const links = response.data.links;
+  console.log("Encontrado:", panoId, description);
+}
+
+// Buscar por panorama ID
+const response2 = await service.getPanorama({
+  pano: "CAoSK0FGMVFpcE..." // ID específico
+});
+```
+
+### StreetViewLocationRequest:
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `location` | `LatLng` | Coordenadas de búsqueda |
+| `radius` | `number` | Radio de búsqueda en metros (default 50) |
+| `source` | `StreetViewSource` | Filtro de fuente |
+| `preference` | `StreetViewPreference` | Preferencia de resultado |
+
+### StreetViewSource (Filtro de fuente):
+| Valor | Descripción |
+|-------|-------------|
+| `DEFAULT` | Todas las fuentes (calle + interiores) |
+| `OUTDOOR` | Solo imágenes exteriores (calles) |
+| `GOOGLE` | Solo imágenes oficiales de Google |
+
+### StreetViewPreference:
+| Valor | Descripción |
+|-------|-------------|
+| `NEAREST` | Panorama más cercano a la ubicación |
+| `BEST` | Mejor panorama disponible |
+
+### StreetViewStatus (Códigos de estado):
+| Código | Descripción |
+|--------|-------------|
+| `OK` | Se encontró un panorama |
+| `ZERO_RESULTS` | No se encontró panorama |
+| `UNKNOWN_ERROR` | Error desconocido |
+
+---
+
+### 2.3 Vincular Street View con Map
+
+```javascript
+// Crear mapa
+const map = new google.maps.Map(document.getElementById("map"), {
+  center: { lat: -33.4078, lng: -70.5755 },
+  zoom: 17
+});
+
+// Crear panorama en div separado
+const panorama = new google.maps.StreetViewPanorama(
+  document.getElementById("street-view"), {
+    position: { lat: -33.4078, lng: -70.5755 },
+    pov: { heading: 90, pitch: 0 }
+  }
+);
+
+// Vincular: el mapa muestra el pegman y permite arrastrar a Street View
+map.setStreetView(panorama);
+```
+
+---
+
+### 2.4 StreetViewCoverageLayer
+
+Muestra dónde hay cobertura de Street View en el mapa (líneas azules).
+
+```javascript
+const coverageLayer = new google.maps.StreetViewCoverageLayer();
+coverageLayer.setMap(map);  // Mostrar cobertura
+coverageLayer.setMap(null); // Ocultar cobertura
+```
+
+---
+
+### 2.5 Custom Panoramas
+
+```javascript
+// Registrar proveedor de panoramas personalizados
+panorama.registerPanoProvider((pano) => {
+  if (pano === "mi-panorama-custom") {
+    return {
+      location: {
+        pano: "mi-panorama-custom",
+        description: "Mi ubicación custom",
+        latLng: new google.maps.LatLng(-33.4078, -70.5755)
+      },
+      links: [],
+      copyright: "© Mi Empresa 2026",
+      tiles: {
+        tileSize: new google.maps.Size(2048, 1024),
+        worldSize: new google.maps.Size(4096, 2048),
+        centerHeading: 90,
+        getTileUrl: (pano, zoom, tileX, tileY) => {
+          return `/tiles/${pano}/${zoom}/${tileX}_${tileY}.jpg`;
+        }
+      }
+    };
+  }
+  return null;  // Usar panorama de Google por defecto
+});
+```
+
+---
+
+## 3. Street View Static API
+
+### Descripción
+Genera imágenes estáticas (no interactivas) de Street View vía URL HTTP. Ideal para thumbnails, reportes, emails.
+
+### URL Base:
+```
+https://maps.googleapis.com/maps/api/streetview
+```
+
+### Parámetros:
+
+| Parámetro | Requerido | Tipo | Descripción |
+|-----------|-----------|------|-------------|
+| `size` | Sí | `WxH` | Tamaño en píxeles. Máx: 640x640 |
+| `location` | Sí* | `lat,lng` o texto | Ubicación (coordenadas o dirección) |
+| `pano` | Sí* | string | ID del panorama (alternativa a location) |
+| `heading` | No | 0-360 | Dirección de la cámara (brújula) |
+| `pitch` | No | -90 a 90 | Inclinación. Default: 0 (horizontal) |
+| `fov` | No | 10-120 | Campo de visión horizontal. Default: 90 |
+| `radius` | No | metros | Radio de búsqueda. Default: 50 |
+| `source` | No | `default`/`outdoor` | Filtro de fuente |
+| `return_error_code` | No | `true`/`false` | Retornar HTTP 404 si no hay imagen |
+| `key` | Sí | string | API key de Google |
+| `signature` | Recom. | string | Firma digital para seguridad |
+
+*Se requiere `location` O `pano`, no ambos.
+
+### Ejemplos de URL:
+
+```bash
+# Por coordenadas (Av. Kennedy 7100, mirando al Este)
+https://maps.googleapis.com/maps/api/streetview?size=640x480&location=-33.4078,-70.5755&heading=90&pitch=0&fov=90&key=API_KEY
+
+# Por dirección
+https://maps.googleapis.com/maps/api/streetview?size=640x480&location=Av+Kennedy+7100,Vitacura,Chile&heading=180&pitch=10&key=API_KEY
+
+# Zoom in (fov pequeño = más zoom)
+https://maps.googleapis.com/maps/api/streetview?size=640x480&location=-33.4078,-70.5755&heading=90&pitch=0&fov=40&key=API_KEY
+
+# Mirando hacia arriba (edificio)
+https://maps.googleapis.com/maps/api/streetview?size=640x480&location=-33.4078,-70.5755&heading=90&pitch=45&key=API_KEY
+
+# Solo imágenes outdoor
+https://maps.googleapis.com/maps/api/streetview?size=640x480&location=-33.4078,-70.5755&source=outdoor&key=API_KEY
+```
+
+### Metadata API (verificar disponibilidad sin gastar cuota):
+```bash
+# Verificar si hay Street View disponible
+https://maps.googleapis.com/maps/api/streetview/metadata?location=-33.4078,-70.5755&key=API_KEY
+
+# Respuesta:
+{
+  "copyright": "© Google",
+  "date": "2023-03",
+  "location": { "lat": -33.4078, "lng": -70.5755 },
+  "pano_id": "CAoSK0FGMVFpcE...",
+  "status": "OK"  // o "ZERO_RESULTS"
+}
+```
+
+### Notas importantes:
+- Si no hay imagen disponible, retorna imagen gris genérica (usar `return_error_code=true` para evitarlo)
+- Límite: 30,000 consultas/minuto
+- Tamaño máximo: 640x640 píxeles
+- Las consultas de metadata NO consumen cuota
+
+---
+
+## 4. Map Tiles API - Street View Tiles
+
+### Descripción
+Tiles de alta resolución para renderizadores custom (Cesium, Three.js, etc.)
+
+### Flujo de Trabajo:
+
+```
+1. Obtener session token (mapType: "streetview")
+2. Buscar panoId por coordenadas
+3. Obtener metadata del panorama
+4. Descargar tiles individuales
+5. Ensamblar panorama equirectangular
+```
+
+### Paso 1: Session Token
+```bash
+POST https://tile.googleapis.com/v1/createSession?key=API_KEY
+Content-Type: application/json
+
+{
+  "mapType": "streetview",
+  "language": "es",
+  "region": "CL"
+}
+
+# Respuesta:
+{
+  "session": "SESSION_TOKEN",
+  "expiry": "1234567890",  # Unix timestamp, válido 2 semanas
+  "tileWidth": 512,
+  "tileHeight": 512,
+  "imageFormat": "jpeg"
+}
+```
+
+### Paso 2: Buscar panoId
+```bash
+POST https://tile.googleapis.com/v1/streetview/panoIds?session=SESSION&key=API_KEY
+Content-Type: application/json
+
+{
+  "locations": [
+    { "lat": -33.4078, "lng": -70.5755 },
+    { "lat": -33.41, "lng": -70.53 }
+  ],
+  "radius": 50
+}
+
+# Respuesta:
+{
+  "panoIds": [
+    { "panoId": "CAoSK0FGMVFpcE...", "lat": -33.4078, "lng": -70.5755 },
+    { "panoId": "dE9vZ3JhcGh5...", "lat": -33.41, "lng": -70.53 }
+  ]
+}
+```
+
+### Paso 3: Metadata
+```bash
+GET https://tile.googleapis.com/v1/streetview/metadata?panoId=PANO_ID&session=SESSION&key=API_KEY
+
+# Respuesta:
+{
+  "panoId": "CAoSK0FGMVFpcE...",
+  "lat": -33.4078,
+  "lng": -70.5755,
+  "imageHeight": 6656,
+  "imageWidth": 13312,
+  "tileHeight": 512,
+  "tileWidth": 512,
+  "heading": 0,
+  "tilt": 90,
+  "roll": 0,
+  "imageryType": "outdoor",
+  "date": "2023-03",
+  "copyright": "© Google",
+  "links": [{ "panoId": "...", "heading": 90 }]
+}
+```
+
+### Paso 4: Descargar Tiles
+```bash
+GET https://tile.googleapis.com/v1/streetview/tiles/{z}/{x}/{y}?session=SESSION&key=API_KEY&panoId=PANO_ID
+
+# z = zoom level (0-5)
+# x = tile column
+# y = tile row
+```
+
+### Paso 5: Thumbnails (alternativa rápida)
+```bash
+GET https://tile.googleapis.com/v1/streetview/thumbnail?session=SESSION&key=API_KEY&panoId=PANO_ID&height=400&width=800&heading=90&pitch=0&fov=90
+```
+
+### Niveles de Zoom:
+| Zoom | Resolución | Tiles |
+|------|-----------|-------|
+| 0 | 416×208 | 1×1 |
+| 1 | 832×416 | 2×1 |
+| 2 | 1664×832 | 4×2 |
+| 3 | 3328×1664 | 7×4 |
+| 4 | 6656×3328 | 13×7 |
+| 5 | 13312×6656 | 26×13 |
+
+---
+
+## 5. Street View Publish API
+
+### Descripción
+Permite subir fotos 360° a Google Street View.
+
+### Endpoints:
+
+```bash
+# Crear upload URL
+POST https://streetviewpublish.googleapis.com/v1/photo:startUpload
+Authorization: Bearer {oauth_token}
+
+# Subir foto (PUT al uploadUrl retornado)
+PUT {uploadUrl}
+Content-Type: image/jpeg
+Body: [bytes de la foto]
+
+# Publicar foto
+POST https://streetviewpublish.googleapis.com/v1/photo
+Authorization: Bearer {oauth_token}
+{
+  "uploadReference": { "uploadUrl": "{uploadUrl}" },
+  "pose": {
+    "latLngPair": { "latitude": -33.4078, "longitude": -70.5755 },
+    "heading": 90,
+    "pitch": 0,
+    "roll": 0,
+    "altitude": 650
+  },
+  "captureTime": "2026-03-26T12:00:00Z"
+}
+
+# Obtener foto
+GET https://streetviewpublish.googleapis.com/v1/photo/{photoId}
+
+# Listar fotos
+GET https://streetviewpublish.googleapis.com/v1/photos?pageSize=100
+
+# Actualizar foto
+PUT https://streetviewpublish.googleapis.com/v1/photo/{photoId}
+
+# Eliminar foto
+DELETE https://streetviewpublish.googleapis.com/v1/photo/{photoId}
+```
+
+### Requisitos de fotos:
+- Formato: JPEG con metadata XMP Photo Sphere
+- Resolución mínima: 7.5 megapíxeles (4K)
+- Proyección: Equirectangular
+- Relación aspecto: 2:1
+- OAuth 2.0 requerido (scope: `streetviewpublish`)
+
+---
+
+## 6. Ejemplo Completo: Visor de Street View para Tasaciones
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RETaxes - Visor Street View</title>
+  <style>
+    #map { width: 50%; height: 500px; float: left; }
+    #street-view { width: 50%; height: 500px; float: left; }
+    #controls { clear: both; padding: 20px; }
+    .info { margin: 10px 0; font-family: Arial; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="street-view"></div>
+  <div id="controls">
+    <div class="info" id="pano-info"></div>
+    <button onclick="captureView('norte')">Vista Norte</button>
+    <button onclick="captureView('sur')">Vista Sur</button>
+    <button onclick="captureView('este')">Vista Este</button>
+    <button onclick="captureView('oeste')">Vista Oeste</button>
+    <button onclick="captureView('arriba')">Vista Arriba</button>
+  </div>
+
+  <script>
+    let map, panorama, marker;
+
+    async function initMap() {
+      const { Map } = await google.maps.importLibrary("maps");
+      const { StreetViewPanorama, StreetViewService } =
+        await google.maps.importLibrary("streetView");
+      const { AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+
+      // Ubicación: Av. Kennedy 7100
+      const location = { lat: -33.4078, lng: -70.5755 };
+
+      // Crear mapa
+      map = new Map(document.getElementById("map"), {
+        center: location,
+        zoom: 17,
+        mapId: "RETAXES_MAP"
+      });
+
+      // Crear Street View
+      panorama = new StreetViewPanorama(
+        document.getElementById("street-view"), {
+          position: location,
+          pov: { heading: 90, pitch: 0 },
+          zoom: 1,
+          addressControl: true,
+          imageDateControl: true,
+          linksControl: true,
+          panControl: true,
+          fullscreenControl: true
+        }
+      );
+
+      // Vincular mapa con Street View
+      map.setStreetView(panorama);
+
+      // Marcador en el mapa
+      marker = new AdvancedMarkerElement({
+        map: map,
+        position: location,
+        title: "Av. Kennedy 7100"
+      });
+
+      // Eventos para capturar datos
+      panorama.addListener("position_changed", () => {
+        updateInfo();
+      });
+      panorama.addListener("pov_changed", () => {
+        updateInfo();
+      });
+    }
+
+    function updateInfo() {
+      const pos = panorama.getPosition();
+      const pov = panorama.getPov();
+      const panoId = panorama.getPano();
+      document.getElementById("pano-info").innerHTML = `
+        <b>Pano ID:</b> ${panoId}<br>
+        <b>Posición:</b> ${pos.lat().toFixed(6)}, ${pos.lng().toFixed(6)}<br>
+        <b>Heading:</b> ${pov.heading.toFixed(1)}° |
+        <b>Pitch:</b> ${pov.pitch.toFixed(1)}° |
+        <b>Zoom:</b> ${panorama.getZoom()}
+      `;
+    }
+
+    function captureView(direction) {
+      const headings = {
+        norte: 0, sur: 180, este: 90, oeste: 270, arriba: null
+      };
+      if (direction === 'arriba') {
+        panorama.setPov({ heading: panorama.getPov().heading, pitch: 60 });
+      } else {
+        panorama.setPov({ heading: headings[direction], pitch: 0 });
+      }
+    }
+
+    // Función para generar URL de imagen estática
+    function getStaticUrl(lat, lng, heading, pitch, size = "640x480") {
+      return `https://maps.googleapis.com/maps/api/streetview?` +
+        `size=${size}&location=${lat},${lng}` +
+        `&heading=${heading}&pitch=${pitch}&fov=90&key=API_KEY`;
+    }
+
+    initMap();
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=API_KEY&callback=initMap&v=weekly" async defer></script>
+</body>
+</html>
+```
+
+---
+
+## 7. URLs de Referencia
+
+| Recurso | URL |
+|---------|-----|
+| Street View JS Guide | https://developers.google.com/maps/documentation/javascript/streetview |
+| JS API Reference (Rendering) | https://developers.google.com/maps/documentation/javascript/reference/street-view |
+| JS API Reference (Service) | https://developers.google.com/maps/documentation/javascript/reference/street-view-service |
+| Static API Overview | https://developers.google.com/maps/documentation/streetview/overview |
+| Static API Request/Response | https://developers.google.com/maps/documentation/streetview/request-streetview |
+| Static API Metadata | https://developers.google.com/maps/documentation/streetview/metadata |
+| Tiles API Street View | https://developers.google.com/maps/documentation/tile/streetview |
+| Tiles API Session Tokens | https://developers.google.com/maps/documentation/tile/session_tokens |
+| Publish API | https://developers.google.com/streetview/publish |
+| Publish API Getting Started | https://developers.google.com/streetview/publish/getting-started |
+| Photo Sphere XMP Metadata | https://developers.google.com/streetview/spherical-metadata |
+| Street View Ready Specs | https://developers.google.com/streetview/ready/specs-svready |
+| JS Examples: Controls | https://developers.google.com/maps/documentation/javascript/examples/streetview-controls |
+| JS Examples: Events | https://developers.google.com/maps/documentation/javascript/examples/streetview-events |
+| JS Examples: Embed | https://developers.google.com/maps/documentation/javascript/examples/streetview-embed |
+| JS Examples: Service | https://developers.google.com/maps/documentation/javascript/examples/streetview-service |
+| JS Examples: Custom Tiles | https://developers.google.com/maps/documentation/javascript/examples/streetview-custom-tiles |
+
+---
+
+## 8. Pricing y Límites
+
+| API | Costo (por 1,000 requests) | Límite |
+|-----|---------------------------|--------|
+| Street View Static API | $7.00 USD | 30,000/min |
+| JS API Street View | $7.00 USD | Sin límite fijo |
+| Street View Tiles | $7.00 USD por 1,000 tiles | Quota diaria |
+| Street View Metadata | Gratis | Sin límite |
+| Street View Publish | Gratis | Rate limits |
+
+**Free tier**: $200 USD/mes de crédito gratuito de Google Maps Platform.
+Equivale a ~28,500 requests de Street View Static gratis al mes.
