@@ -1,0 +1,217 @@
+================================================================================
+         CERTIFICADO DE INFORME PREVIO - REFERENCIAL
+         MUNICIPALIDAD DE LAS CONDES
+         Dirección de Obras Municipales
+================================================================================
+
+Fecha de emisión:       26 de marzo de 2026
+N° de certificado:      REF-2026-XXXX (Referencial - No oficial)
+
+================================================================================
+1. IDENTIFICACIÓN DEL PREDIO
+================================================================================
+
+Dirección:              Av. Manquehue Norte 958, Las Condes
+Comuna:                 Las Condes
+Provincia:              Santiago
+Región:                 Metropolitana de Santiago
+País:                   Chile
+
+Coordenadas WGS84:     Latitud  -33.3990058
+                        Longitud -70.5713988
+Coordenadas UTM:        Huso 19S (EPSG:32719)
+
+Sector referencial:     Nueva Las Condes / Sector Los Militares - Manquehue
+
+================================================================================
+2. ZONIFICACIÓN SEGÚN PLAN REGULADOR COMUNAL
+================================================================================
+
+Instrumento:            Plan Regulador Comunal de Las Condes (PRC)
+                        Modificación N°11 - Texto Refundido 2021
+                        MPRCLC-2020
+
+Zona de Edificación:    E-Am4 (Edificación Aislada Media N°4)
+                        Sector Los Militares / Manquehue
+
+Zona de Uso de Suelo:   U-V1 / U-V3 (Zona Vivienda / Mixta)
+                        (Confirmar en Plano N°2 del PRC)
+
+================================================================================
+3. NORMAS URBANÍSTICAS APLICABLES - ZONA E-Am4
+================================================================================
+
+A) TABLA BASE (Tabla A):
+--------------------------------------------------------------------------------
+| Norma                              | Valor                                  |
+|-------------------------------------|----------------------------------------|
+| Tipología de edificación            | Aislada                                |
+| Densidad bruta máxima               | Según tabla (consultar Ordenanza)      |
+| Subdivisión predial mínima          | Según tabla zona                       |
+| Coeficiente de constructibilidad    | Según tabla zona (ref. 0.6 - 1.0)     |
+| Coeficiente de ocupación de suelo   | Según tabla zona (ref. 0.4 - 0.6)     |
+| Altura máxima                       | Según tabla zona                       |
+| Rasante                             | 60° - 70° (según tabla)               |
+| Antejardín                          | 5.0 m (referencial)                    |
+| Distanciamiento                     | Según OGUC y rasante aplicable         |
+| Adosamiento                         | No permitido (tipología aislada)       |
+--------------------------------------------------------------------------------
+
+B) TABLA DE DENSIFICACIÓN (Tabla B - Proyectos de densificación):
+--------------------------------------------------------------------------------
+| Norma                              | Valor                                  |
+|-------------------------------------|----------------------------------------|
+| Coef. de constructibilidad          | Incremento hasta 30% sobre Tabla A     |
+| Coef. de ocupación de suelo         | Hasta 0.60                             |
+| Altura máxima                       | Hasta 14.0 m (sin piso retirado)      |
+|                                     | Hasta 18.0 m (con reducción OCS a 45%)|
+| Sector Los Militares/Manquehue      | Hasta 12 pisos / 42.0 m               |
+|                                     | (en proyectos de densificación)        |
+| Piso retirado                       | Permitido: hasta 4.0 m adicionales     |
+|                                     | Superficie máx: 65% planta inferior    |
+|                                     | No contabiliza en altura total         |
+| Uso primer piso (Tabla B)           | No se permite vivienda en 1er piso     |
+--------------------------------------------------------------------------------
+
+C) INCENTIVOS APLICABLES:
+--------------------------------------------------------------------------------
+- Incentivo por superficie predial (Art. 17): Si el predio tiene 2x o más
+  la superficie mínima de subdivisión, puede incrementar constructibilidad
+  hasta un 30%.
+- Si colinda con Sector Avda. Las Condes (S-LC): coef. constructibilidad
+  puede llegar a 1.8.
+- Piso retirado habitable permitido sobre altura máxima.
+--------------------------------------------------------------------------------
+
+================================================================================
+4. USOS DE SUELO PERMITIDOS
+================================================================================
+
+Según Artículo 40 de la Ordenanza PRC y Cuadro de Usos U-V1/U-V3:
+
+USOS PERMITIDOS:
+  [P] Residencial:
+      - Vivienda unifamiliar
+      - Vivienda colectiva (en densificación)
+
+  [P] Equipamiento (según escala):
+      - Comercio menor (escala vecinal/barrial)
+      - Oficinas
+      - Servicios profesionales
+      - Educación
+      - Salud (consultas)
+      - Culto
+      - Cultura
+
+  [P] Áreas verdes
+
+USOS CONDICIONADOS:
+  [C] Equipamiento comercial mayor (según zona específica)
+  [C] Actividades productivas inofensivas
+
+USOS PROHIBIDOS:
+  [X] Industria
+  [X] Infraestructura (salvo excepciones OGUC)
+  [X] Bodegaje
+  [X] Actividades productivas molestas o peligrosas
+  [X] Talleres industriales
+
+NOTA: Los usos no mencionados en el cuadro se entienden como PROHIBIDOS.
+Consultar Cuadro oficial: https://arcgismlc.lascondes.cl/normativa/Uv1.pdf
+
+================================================================================
+5. VIALIDAD
+================================================================================
+
+Vía principal:          Av. Manquehue Norte
+Clasificación:          Vía Troncal / Colectora
+                        (según PRMS - Plan Regulador Metropolitano de Santiago)
+Ancho de apertura:      Según fajas del PRMS (consultar Layer 17: OWD.Ejes_PRMS)
+Afectación por vialidad: Verificar en Plano N°1 del PRC
+
+================================================================================
+6. DATOS CENSALES DEL SECTOR (INE 2017)
+================================================================================
+
+Fuente: Consulta/CENSO/MapServer - arcgismlc.lascondes.cl
+        Manzana_INE_2017/FeatureServer
+
+Comuna Las Condes:
+  - Población total (Censo 2017):  283,471 habitantes
+  - Superficie comunal:            99.4 km²
+  - Densidad:                      ~2,851 hab/km²
+
+Sector Nueva Las Condes / Manquehue Norte:
+  - Zona censal:                   Distrito censal urbano INE
+  - Tipología predominante:        Mixta (vivienda + oficinas + comercio)
+  - Característica:                Zona de alta densificación en altura
+
+================================================================================
+7. SERVICIOS GIS CONSULTADOS (ArcGIS Enterprise - Las Condes)
+================================================================================
+
+| Servicio                          | URL                                    |
+|-----------------------------------|----------------------------------------|
+| Plan Regulador                    | arcgismlc.lascondes.cl/server/rest/    |
+|                                   | services/PLAN_REGULADOR/MapServer      |
+| Censo INE 2017                    | .../Consulta/CENSO/MapServer           |
+| Manzanas INE                      | .../Manzana_INE_2017/FeatureServer     |
+| Arbolado Urbano                   | .../Hosted/Arbolado_Urbano/FeatureServ.|
+| Ejes PRMS (Vialidad)             | .../PLAN_REGULADOR/MapServer/17        |
+| Visor Territorial                 | arcgismlc.lascondes.cl/visorterritorial|
+
+================================================================================
+8. DOCUMENTACIÓN DE REFERENCIA
+================================================================================
+
+- Ordenanza PRC Las Condes (Texto Refundido 2021):
+  https://archivos.lascondes.cl/descargas/plano-regulador/
+  2021_11_10_Texto_Refundido_Ordenanza_PRC_Exposicion_vf_exp.pdf
+
+- Plano de Uso de Suelo (Lámina 2):
+  https://archivos.lascondes.cl/descargas/plano-regulador/
+  PLANO-DE-USO-DE-SUELO--LAMINA-2--11.11.2021.pdf
+
+- Cuadro de Usos Zona U-V1:
+  https://arcgismlc.lascondes.cl/normativa/Uv1.pdf
+
+- Ficha Zona E-Am4 (U-V3):
+  http://www.lascondesonline.cl/Cartografia_Las_Condes/
+  Plan%20Regulador/pdf/EAm4_Uv3.pdf
+
+- Visor Territorial ArcGIS:
+  https://arcgismlc.lascondes.cl/visorterritorial/
+
+- PRC Las Condes (ArcGIS Hub - OCUC):
+  https://ideocuc-ocuc.hub.arcgis.com/datasets/f060251d6b4b47d7b216eee0d466f8d5_0
+
+================================================================================
+9. OBSERVACIONES
+================================================================================
+
+1. ESTE DOCUMENTO ES REFERENCIAL Y NO CONSTITUYE UN CERTIFICADO OFICIAL.
+   Para obtener el Certificado de Informaciones Previas oficial, debe
+   solicitarse directamente en la Dirección de Obras Municipales (DOM)
+   de la Municipalidad de Las Condes.
+
+2. La zonificación exacta del predio (E-Am4 u otra) debe verificarse
+   en el Visor Territorial oficial o consultando directamente en la DOM.
+
+3. Las normas urbanísticas indicadas corresponden a valores referenciales
+   extraídos de la Ordenanza del PRC (Texto Refundido 2021). Podrían
+   existir modificaciones posteriores.
+
+4. Para proyectos específicos, consultar el Artículo 38 (normas por zona)
+   y Artículo 40 (usos de suelo) de la Ordenanza vigente.
+
+5. El predio podría estar afecto a normas del Plan Regulador Metropolitano
+   de Santiago (PRMS), especialmente en materia de vialidad y áreas verdes.
+
+6. Geocodificación realizada con ArcGIS World Geocoding Service.
+   Datos territoriales consultados desde ArcGIS Enterprise de Las Condes.
+
+================================================================================
+         GENERADO CON SKILLS ArcGIS - Análisis Territorial Automatizado
+         Fuentes: ArcGIS Enterprise Las Condes + Ordenanza PRC 2021
+         Fecha: 26 de marzo de 2026
+================================================================================
