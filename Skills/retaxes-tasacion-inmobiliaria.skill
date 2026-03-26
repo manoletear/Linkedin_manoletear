@@ -1,0 +1,282 @@
+# RETaxes - Tasación Inmobiliaria y Contribuciones Chile
+
+## Descripción
+Conocimiento completo del sistema de tasaciones inmobiliarias, contribuciones territoriales, y normativa tributaria de bienes raíces en Chile, integrado con ArcGIS y servicios GIS.
+
+---
+
+## 1. Sistema de Contribuciones en Chile (SII)
+
+### ¿Qué son las contribuciones?
+Impuesto territorial que grava los bienes raíces. Lo recauda el Servicio de Impuestos Internos (SII) y se paga trimestralmente (abril, junio, septiembre, noviembre).
+
+### Avalúo Fiscal
+El SII determina el avalúo fiscal de cada propiedad considerando:
+- Ubicación (comuna, sector, calle)
+- Superficie de terreno
+- Superficie construida
+- Materialidad y calidad de la construcción
+- Antigüedad
+- Destino (habitacional, comercial, agrícola, etc.)
+
+### Tasas de Contribuciones (vigentes):
+
+#### Bienes Raíces No Agrícolas (Habitacionales):
+| Tramo Avalúo (UF) | Tasa Anual | Exención |
+|--------------------|------------|----------|
+| 0 - 670 UF | 0% | Exento |
+| 670 - 3,356 UF | 0.98% | Sobre 670 UF |
+| 3,356 - 6,713 UF | 1.143% | Sobre 3,356 UF |
+| > 6,713 UF | 1.306% | Sobre 6,713 UF |
+
+#### Sobretasa:
+- Sitios eriazos: +100% sobre tasa normal
+- Propiedades > 670 UF con destino habitacional: sobretasa de 0.025%
+- Bienes raíces no agrícolas no habitacionales: tasa fija 1.2%
+
+### Fórmula de Cálculo:
+```
+Contribución Trimestral = (Avalúo Fiscal × Tasa Anual) / 4
+
+Ejemplo:
+Avalúo = 5,000 UF
+Tramo 1: (670 - 0) × 0% = 0 UF
+Tramo 2: (3,356 - 670) × 0.98% = 26.32 UF
+Tramo 3: (5,000 - 3,356) × 1.143% = 18.79 UF
+Total anual = 45.11 UF
+Trimestral = 11.28 UF ≈ $430,000 CLP (UF a $38,000)
+```
+
+---
+
+## 2. Informe de Tasación Comercial
+
+### Métodos de Tasación:
+
+#### Método de Comparación (más usado)
+```
+1. Identificar propiedades comparables vendidas recientemente
+2. Ajustar por diferencias (ubicación, tamaño, estado, antigüedad)
+3. Determinar valor unitario $/m² promedio ajustado
+4. Aplicar a la propiedad tasada:
+   Valor = Superficie × Valor unitario ajustado
+```
+
+#### Método del Costo (Reposición)
+```
+Valor = Valor Terreno + Costo Reposición Construcción - Depreciación
+
+Costo Reposición = Superficie × Costo/m² según materialidad
+Depreciación = Edad / Vida Útil × Costo Reposición
+```
+
+#### Método de la Renta (Capitalización)
+```
+Valor = Renta Neta Anual / Tasa de Capitalización
+
+Renta Neta = Renta Bruta - Gastos Operacionales
+Tasa Cap = 5% - 8% (dependiendo del mercado)
+```
+
+### Estructura del Informe de Tasación:
+
+```
+1. IDENTIFICACIÓN
+   - Dirección completa
+   - Rol de avalúo (SII)
+   - Coordenadas GPS
+   - Comuna, región
+
+2. DESCRIPCIÓN DEL ENTORNO
+   - Zonificación PRC (zona, usos)
+   - Equipamiento cercano
+   - Transporte público
+   - Análisis del barrio
+
+3. DESCRIPCIÓN DEL TERRENO
+   - Superficie según escritura
+   - Superficie según plano
+   - Forma y proporciones
+   - Topografía
+   - Orientación
+   - Servicios (agua, alcantarillado, electricidad, gas)
+
+4. DESCRIPCIÓN DE LA CONSTRUCCIÓN
+   - Superficie edificada por piso
+   - Materialidad (estructura, muros, techo, pisos)
+   - Año de construcción
+   - Estado de conservación
+   - N° de dormitorios, baños, estacionamientos
+   - Instalaciones especiales
+
+5. ANÁLISIS DE MERCADO
+   - Ofertas comparables vigentes
+   - Ventas recientes en el sector
+   - Tendencias del mercado local
+   - Análisis de valor por m²
+
+6. TASACIÓN
+   - Método utilizado
+   - Valor del terreno
+   - Valor de la construcción
+   - Valor comercial total
+   - Valor UF y CLP
+
+7. NORMATIVA APLICABLE
+   - Plan Regulador Comunal vigente
+   - Zona de edificación
+   - Usos de suelo permitidos
+   - Coeficientes y alturas
+   - Afectaciones (vialidad, áreas verdes)
+
+8. ANEXOS
+   - Fotografías
+   - Plano de ubicación
+   - Croquis del predio
+   - Certificado de dominio
+   - Informe previo
+```
+
+---
+
+## 3. Integración ArcGIS para Tasaciones
+
+### Datos que se extraen por propiedad:
+
+```python
+# Flujo de tasación con ArcGIS
+from arcgis.features import FeatureLayer
+from arcgis.geocoding import geocode
+
+# 1. Geocodificar dirección
+result = geocode("Mapocho 5817, Quinta Normal, Chile")
+lat, lon = result[0]['location']['y'], result[0]['location']['x']
+
+# 2. Consultar PRC Metropolitana
+prc = FeatureLayer("https://services3.arcgis.com/.../PRC_Metropolitana/FeatureServer/0")
+zona = prc.query(
+    geometry={'x': lon, 'y': lat},
+    geometryType='esriGeometryPoint',
+    spatialRel='esriSpatialRelIntersects',
+    outFields='*'
+)
+
+# 3. Extraer normativa
+for feature in zona.features:
+    print(f"Zona: {feature.attributes['ZONA']}")
+    print(f"Comuna: {feature.attributes['COMUNA']}")
+    print(f"Uso: {feature.attributes['USO_SUELO']}")
+
+# 4. Consultar avalúo fiscal SII
+# (requiere acceso al servicio del SII por ROL)
+
+# 5. GeoEnrichment: datos demográficos del sector
+from arcgis.geoenrichment import enrich
+enriched = enrich(
+    study_areas=[{"geometry": {"x": lon, "y": lat},
+                  "areaType": "RingBuffer",
+                  "bufferUnits": "esriKilometers",
+                  "bufferRadii": [1]}],
+    data_collections=["KeyGlobalFacts", "Age", "Income"]
+)
+```
+
+### Datos de Google Earth Engine para tasaciones:
+
+```python
+import ee
+ee.Initialize(project='retaxes-project')
+
+# NDVI del sector (estado de vegetación/áreas verdes)
+sentinel = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterDate('2025-01-01', '2025-12-31')
+    .filterBounds(ee.Geometry.Point(lon, lat))
+    .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+    .median())
+
+ndvi = sentinel.normalizedDifference(['B8', 'B4']).rename('NDVI')
+stats = ndvi.reduceRegion(
+    reducer=ee.Reducer.mean(),
+    geometry=ee.Geometry.Point(lon, lat).buffer(500),
+    scale=10
+)
+# NDVI alto = más áreas verdes = mejor valoración
+```
+
+---
+
+## 4. Rol de Avalúo y Consulta SII
+
+### Estructura del Rol:
+```
+ROL: XXXX-YYYY
+Donde:
+  XXXX = Número de manzana
+  YYYY = Número de predio dentro de la manzana
+```
+
+### Consulta de avalúo:
+- URL: https://zeus.sii.cl/avalu_cgi/CGI_BnsRchique
+- Requiere: Comuna + ROL
+- Retorna: Avalúo fiscal, destino, superficie
+
+### Datos del SII relevantes para tasación:
+| Campo | Descripción |
+|-------|-------------|
+| Avalúo total | Valor fiscal del bien raíz |
+| Avalúo terreno | Componente terreno |
+| Avalúo construcción | Componente edificación |
+| Superficie terreno | m² según SII |
+| Superficie construida | m² edificados |
+| Destino | H (habitacional), C (comercial), etc. |
+| Materialidad | Superior, Buena, Regular, Económica |
+| Año construcción | Antigüedad |
+| Exención | Si aplica (DFL2, etc.) |
+
+---
+
+## 5. Valores de Referencia por Zona
+
+### Valores UF/m² referenciales Santiago (2025-2026):
+
+| Sector | Terreno UF/m² | Depto UF/m² | Casa UF/m² |
+|--------|---------------|-------------|-------------|
+| Las Condes (oriente) | 25-45 | 85-120 | 100-150 |
+| Providencia | 30-50 | 80-110 | 90-130 |
+| Ñuñoa | 20-35 | 55-80 | 70-100 |
+| Santiago Centro | 15-30 | 45-70 | 60-90 |
+| Quinta Normal | 8-15 | 30-50 | 40-65 |
+| Lo Barnechea | 15-60 | 70-100 | 80-200 |
+| La Florida | 8-18 | 35-55 | 45-75 |
+| Maipú | 5-12 | 30-45 | 35-60 |
+
+NOTA: Valores referenciales. Varían significativamente según ubicación
+exacta, tamaño, estado, y condiciones de mercado.
+
+---
+
+## 6. Normativa Legal Relevante
+
+| Norma | Contenido |
+|-------|-----------|
+| Ley 17.235 | Ley sobre Impuesto Territorial |
+| DFL N°2 de 1959 | Exención de contribuciones viviendas económicas |
+| LGUC (DFL 458) | Ley General de Urbanismo y Construcciones |
+| OGUC (DS 47) | Ordenanza General de Urbanismo y Construcciones |
+| Circular SII N°71 | Procedimiento de reavalúo |
+| NCh 3359 | Norma chilena de tasación de bienes raíces |
+
+---
+
+## 7. Certificados Necesarios para Tasación
+
+| Certificado | Emisor | Uso |
+|-------------|--------|-----|
+| Certificado de Dominio Vigente | CBR | Verificar propiedad |
+| Certificado de Hipotecas y Gravámenes | CBR | Cargas sobre el inmueble |
+| Certificado de No Expropiación | SERVIU/MOP | Sin afectación |
+| Certificado de Informaciones Previas | DOM Municipal | Normativa urbanística |
+| Certificado de Avalúo Fiscal | SII | Valor fiscal |
+| Certificado de Contribuciones | TGR | Estado de pago |
+| Certificado de Número | DOM Municipal | Dirección oficial |
+| Recepción Final de Obras | DOM Municipal | Regularidad construcción |

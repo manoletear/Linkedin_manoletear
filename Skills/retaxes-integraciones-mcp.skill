@@ -1,0 +1,475 @@
+# RETaxes - Integraciones MCP Completas
+
+## Descripción
+Skill maestro que documenta TODAS las integraciones MCP disponibles para el proyecto RETaxes (Real Estate Taxes), incluyendo ejemplos de uso, flujos de trabajo y arquitectura del sistema.
+
+---
+
+## 1. ARQUITECTURA DE INTEGRACIONES
+
+```
+                        ┌─────────────────┐
+                        │    RETaxes App   │
+                        │   (Vercel/Next)  │
+                        └────────┬────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+   ┌────▼────┐            ┌─────▼─────┐           ┌─────▼─────┐
+   │ Supabase │            │  ArcGIS   │           │  Google   │
+   │   DB +   │            │ + Earth   │           │  Earth    │
+   │  Auth    │            │  Engine   │           │  Engine   │
+   └────┬────┘            └─────┬─────┘           └─────┬─────┘
+        │                       │                       │
+   Propiedades           Zonificación             Imágenes
+   Tasaciones            Geocoding                Satelitales
+   Usuarios              Plan Regulador           NDVI/Cambios
+   Contribuciones        Distancias               Cobertura
+        │                       │                       │
+        └───────────────────────┼───────────────────────┘
+                                │
+        ┌───────────┬───────────┼───────────┬───────────┐
+        │           │           │           │           │
+   ┌────▼──┐  ┌────▼──┐  ┌────▼──┐  ┌────▼──┐  ┌────▼──┐
+   │HubSpot│  │ Gmail │  │G.Cal. │  │Notion │  │ Gamma │
+   │  CRM  │  │       │  │       │  │       │  │       │
+   └───────┘  └───────┘  └───────┘  └───────┘  └───────┘
+   Clientes   Emails     Agenda     Wiki/Docs  Reportes
+   Pipeline   Notific.   Inspecc.   Normativa  Presentac.
+```
+
+---
+
+## 2. SUPABASE - Base de Datos y Backend
+
+### Herramientas disponibles:
+- `execute_sql` - Ejecutar consultas SQL
+- `list_tables` - Listar tablas
+- `apply_migration` - Aplicar migraciones
+- `deploy_edge_function` - Desplegar funciones serverless
+- `get_logs` - Ver logs de la aplicación
+- `list_projects` - Listar proyectos
+- `create_project` - Crear proyecto nuevo
+
+### Esquema propuesto para RETaxes:
+
+```sql
+-- Propiedades
+CREATE TABLE properties (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    address TEXT NOT NULL,
+    commune TEXT NOT NULL,
+    region TEXT DEFAULT 'Metropolitana',
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    lot_area_m2 NUMERIC,
+    built_area_m2 NUMERIC,
+    floors INTEGER,
+    year_built INTEGER,
+    zoning_code TEXT,          -- Ej: "E-Am4", "Zona SC"
+    land_use TEXT,             -- Ej: "Residencial", "Mixto"
+    max_height_m NUMERIC,
+    max_floors INTEGER,
+    constructibility_coef NUMERIC,
+    soil_occupation_coef NUMERIC,
+    tax_appraisal_clf NUMERIC, -- Avalúo fiscal en CLF (UF)
+    commercial_value_clf NUMERIC,
+    owner_id UUID REFERENCES owners(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Propietarios
+CREATE TABLE owners (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    rut TEXT UNIQUE,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    hubspot_contact_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tasaciones
+CREATE TABLE appraisals (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    property_id UUID REFERENCES properties(id),
+    appraiser_id UUID,
+    appraisal_date DATE,
+    commercial_value_clf NUMERIC,
+    tax_value_clf NUMERIC,
+    method TEXT,               -- "Comparación", "Costo", "Renta"
+    status TEXT DEFAULT 'pending', -- pending, in_progress, completed
+    report_url TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Contribuciones (impuestos territoriales)
+CREATE TABLE tax_contributions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    property_id UUID REFERENCES properties(id),
+    year INTEGER,
+    quarter INTEGER,          -- 1,2,3,4
+    amount_clp BIGINT,
+    due_date DATE,
+    paid BOOLEAN DEFAULT FALSE,
+    paid_date DATE,
+    receipt_number TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Zonas PRC por comuna
+CREATE TABLE prc_zones (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    commune TEXT NOT NULL,
+    zone_code TEXT NOT NULL,
+    zone_name TEXT,
+    land_uses_permitted TEXT[],
+    land_uses_prohibited TEXT[],
+    max_height_m NUMERIC,
+    max_floors INTEGER,
+    constructibility_coef NUMERIC,
+    soil_occupation_coef NUMERIC,
+    max_density_hab_ha NUMERIC,
+    min_lot_area_m2 NUMERIC,
+    setback_m NUMERIC,
+    building_type TEXT,        -- "Aislada", "Pareada", "Continua"
+    source_url TEXT,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Índices espaciales (PostGIS)
+-- ALTER TABLE properties ADD COLUMN geom GEOMETRY(Point, 4326);
+-- CREATE INDEX idx_properties_geom ON properties USING GIST(geom);
+```
+
+### Edge Functions para cálculos:
+
+```typescript
+// supabase/functions/calculate-tax/index.ts
+import { serve } from "https://deno.land/std/http/server.ts";
+
+serve(async (req) => {
+  const { property_id, appraisal_value_uf } = await req.json();
+
+  // Tabla de tasas de contribuciones Chile (SII)
+  // Tramo 1: 0-670 UF exento
+  // Tramo 2: 670-3,356 UF tasa 0.98%
+  // Tramo 3: 3,356-6,713 UF tasa 1.143%
+  // Tramo 4: >6,713 UF tasa 1.306%
+
+  let annual_tax_uf = 0;
+  if (appraisal_value_uf <= 670) {
+    annual_tax_uf = 0;
+  } else if (appraisal_value_uf <= 3356) {
+    annual_tax_uf = (appraisal_value_uf - 670) * 0.0098;
+  } else if (appraisal_value_uf <= 6713) {
+    annual_tax_uf = (3356 - 670) * 0.0098 + (appraisal_value_uf - 3356) * 0.01143;
+  } else {
+    annual_tax_uf = (3356 - 670) * 0.0098 + (6713 - 3356) * 0.01143
+                  + (appraisal_value_uf - 6713) * 0.01306;
+  }
+
+  const quarterly_tax_uf = annual_tax_uf / 4;
+
+  return new Response(JSON.stringify({
+    appraisal_value_uf,
+    annual_tax_uf: Math.round(annual_tax_uf * 100) / 100,
+    quarterly_tax_uf: Math.round(quarterly_tax_uf * 100) / 100,
+    exempt: appraisal_value_uf <= 670
+  }));
+});
+```
+
+---
+
+## 3. HUBSPOT CRM - Gestión de Clientes
+
+### Herramientas disponibles:
+- `get_crm_objects` - Obtener contactos, deals, companies
+- `manage_crm_objects` - Crear/actualizar/eliminar objetos
+- `search_crm_objects` - Buscar en el CRM
+- `search_owners` - Buscar propietarios de deals
+- `get_properties` / `search_properties` - Propiedades del CRM
+
+### Pipeline de Tasación propuesto:
+
+```
+Solicitud → Revisión Docs → Inspección Terreno → Análisis → Informe → Cobro → Cerrado
+```
+
+### Ejemplos de uso:
+
+```
+# Crear contacto de propietario
+manage_crm_objects(
+  operation: "create",
+  objectType: "contacts",
+  properties: {
+    firstname: "Juan",
+    lastname: "Pérez",
+    email: "juan@email.com",
+    phone: "+56912345678",
+    address: "Mapocho 5817, Quinta Normal"
+  }
+)
+
+# Crear deal de tasación
+manage_crm_objects(
+  operation: "create",
+  objectType: "deals",
+  properties: {
+    dealname: "Tasación - Mapocho 5817",
+    pipeline: "tasaciones",
+    dealstage: "solicitud",
+    amount: 350000,
+    property_address: "Mapocho 5817, Quinta Normal"
+  }
+)
+
+# Buscar tasaciones pendientes
+search_crm_objects(
+  objectType: "deals",
+  query: "pendiente",
+  filterGroups: [{ filters: [{ propertyName: "dealstage", operator: "EQ", value: "inspeccion" }] }]
+)
+```
+
+---
+
+## 4. GMAIL - Comunicación
+
+### Herramientas disponibles:
+- `gmail_search_messages` - Buscar emails
+- `gmail_read_message` - Leer un email
+- `gmail_read_thread` - Leer hilo completo
+- `gmail_create_draft` - Crear borrador
+- `gmail_list_drafts` - Listar borradores
+- `gmail_list_labels` - Listar etiquetas
+- `gmail_get_profile` - Perfil de la cuenta
+
+### Ejemplos para RETaxes:
+
+```
+# Buscar correspondencia de un cliente
+gmail_search_messages(query: "from:juan@email.com subject:tasación")
+
+# Crear borrador de informe
+gmail_create_draft(
+  to: ["propietario@email.com"],
+  subject: "Informe de Tasación - Mapocho 5817, Quinta Normal",
+  body: "Estimado Sr. Pérez, adjunto el informe de tasación...",
+  cc: ["archivo@retaxes.cl"]
+)
+
+# Buscar notificaciones del SII
+gmail_search_messages(query: "from:sii.cl contribuciones")
+```
+
+---
+
+## 5. GOOGLE CALENDAR - Agenda
+
+### Herramientas disponibles:
+- `gcal_list_events` - Listar eventos
+- `gcal_create_event` - Crear evento
+- `gcal_update_event` - Actualizar evento
+- `gcal_delete_event` - Eliminar evento
+- `gcal_find_meeting_times` - Buscar horarios disponibles
+- `gcal_find_my_free_time` - Ver tiempo libre
+- `gcal_respond_to_event` - Responder invitación
+
+### Ejemplos para RETaxes:
+
+```
+# Programar inspección de terreno
+gcal_create_event(
+  summary: "Inspección - Mapocho 5817, Quinta Normal",
+  description: "Tasación comercial. Propietario: Juan Pérez. Tel: +56912345678",
+  start: "2026-04-01T10:00:00-04:00",
+  end: "2026-04-01T11:30:00-04:00",
+  location: "Mapocho 5817, Quinta Normal, Santiago",
+  attendees: ["tasador@retaxes.cl", "juan@email.com"]
+)
+
+# Buscar disponibilidad del tasador
+gcal_find_my_free_time(
+  startDate: "2026-04-01",
+  endDate: "2026-04-05"
+)
+```
+
+---
+
+## 6. NOTION - Documentación y Gestión
+
+### Herramientas disponibles:
+- `notion-search` - Buscar páginas y bases de datos
+- `notion-create-pages` - Crear páginas
+- `notion-create-database` - Crear base de datos
+- `notion-update-page` - Actualizar página
+- `notion-fetch` - Obtener contenido de página
+- `notion-create-comment` - Comentar
+- `notion-get-users` - Usuarios del workspace
+
+### Estructura propuesta en Notion:
+
+```
+📁 RETaxes
+├── 📊 Base de Datos: Tasaciones en Curso
+├── 📊 Base de Datos: Normativas por Comuna
+├── 📄 Wiki: Procedimientos de Tasación
+├── 📄 Wiki: Cálculo de Contribuciones Chile
+├── 📄 Wiki: Zonas PRC por Comuna
+├── 📄 Plantilla: Informe de Tasación
+├── 📄 Plantilla: Certificado de Informe Previo
+└── 📄 Roadmap del Producto
+```
+
+---
+
+## 7. FIGMA - Diseño UI/UX
+
+### Herramientas disponibles:
+- `get_design_context` - Obtener diseño y código
+- `get_screenshot` - Capturar screenshot
+- `get_metadata` - Metadata del archivo
+- `generate_diagram` - Crear diagramas en FigJam
+- `create_new_file` - Crear archivo nuevo
+- `use_figma` - Crear/editar diseños en Figma
+
+### Uso para RETaxes:
+- Dashboard principal con mapa y listado de propiedades
+- Formulario de tasación
+- Reporte visual de informe previo
+- Vista de mapa con zonificación ArcGIS
+- Diagramas de flujo de procesos
+
+---
+
+## 8. VERCEL - Deployment
+
+### Herramientas disponibles:
+- `deploy_to_vercel` - Desplegar aplicación
+- `list_projects` - Listar proyectos
+- `get_project` - Info del proyecto
+- `list_deployments` - Listar deploys
+- `get_deployment` - Info de un deploy
+- `get_deployment_build_logs` - Logs de build
+- `get_runtime_logs` - Logs en runtime
+- `search_vercel_documentation` - Buscar docs
+
+### Configuración para RETaxes:
+```
+# Deploy de la app Next.js
+deploy_to_vercel(projectName: "retaxes-app")
+
+# Ver logs de producción
+get_runtime_logs(projectName: "retaxes-app")
+```
+
+---
+
+## 9. GITHUB - Código y CI/CD
+
+### Herramientas disponibles:
+- `create_repository` - Crear repo
+- `create_pull_request` - Crear PR
+- `list_issues` / `issue_write` - Gestionar issues
+- `push_files` - Pushear archivos
+- `search_code` - Buscar código
+- `list_commits` - Ver commits
+- `merge_pull_request` - Mergear PRs
+- Y muchas más...
+
+---
+
+## 10. GAMMA - Presentaciones y Reportes
+
+### Herramientas disponibles:
+- `generate` - Generar presentación/documento/webpage
+- `get_generation_status` - Estado de generación
+- `get_themes` - Temas disponibles
+- `get_folders` - Carpetas
+
+### Uso para RETaxes:
+```
+# Generar reporte de tasación visual
+generate(
+  topic: "Informe de Tasación - Propiedad Mapocho 5817, Quinta Normal.
+          Avalúo: 2,500 UF. Zona: Mixta. Altura máx: 5 pisos.
+          Incluir mapa, fotos, análisis de mercado, comparables.",
+  outputType: "document"
+)
+
+# Presentación para municipio
+generate(
+  topic: "RETaxes - Plataforma de Gestión de Impuestos Territoriales.
+          Integración con ArcGIS, automatización de informes previos,
+          cálculo de contribuciones, gestión de tasaciones.",
+  outputType: "presentation"
+)
+```
+
+---
+
+## 11. CLAY/APOLLO - Enriquecimiento de Datos
+
+### Herramientas disponibles:
+- `find-and-enrich-company` - Encontrar y enriquecer empresa
+- `find-and-enrich-contacts-at-company` - Contactos en empresa
+- `find-and-enrich-list-of-contacts` - Enriquecer lista
+- `get-my-accounts` - Mis cuentas
+- `ask-question-about-accounts` - Preguntar sobre cuentas
+
+### Uso para RETaxes:
+```
+# Encontrar inmobiliarias en Chile
+find-and-enrich-company(companyName: "Inmobiliaria Los Andes Chile")
+
+# Buscar contactos en municipalidad
+find-and-enrich-contacts-at-company(
+  companyName: "Municipalidad de Quinta Normal",
+  titles: ["Director Obras", "Asesor Urbano"]
+)
+```
+
+---
+
+## 12. FLUJOS DE TRABAJO INTEGRADOS
+
+### Flujo 1: Tasación Completa Automatizada
+```
+1. [HubSpot] Recibir solicitud de tasación → crear Deal
+2. [ArcGIS] Geocodificar dirección → obtener coordenadas
+3. [ArcGIS] Consultar Plan Regulador → zona, normas, usos
+4. [Earth Engine] Analizar imágenes satelitales del predio
+5. [Supabase] Almacenar propiedad y datos normativos
+6. [Google Calendar] Programar inspección
+7. [Gmail] Enviar confirmación al propietario
+8. [Supabase Edge] Calcular contribuciones estimadas
+9. [Gamma] Generar informe visual de tasación
+10. [Gmail] Enviar informe al cliente
+11. [HubSpot] Actualizar Deal → Completado
+12. [Notion] Registrar en base de conocimiento
+```
+
+### Flujo 2: Monitoreo Territorial
+```
+1. [Earth Engine] Detectar cambios de cobertura (NDVI)
+2. [ArcGIS] Cruzar con zonificación PRC
+3. [Supabase] Registrar alertas de cambio
+4. [Gmail] Notificar al equipo
+5. [Notion] Documentar hallazgos
+```
+
+### Flujo 3: Prospección de Clientes
+```
+1. [Clay] Buscar inmobiliarias y constructoras
+2. [Clay] Enriquecer contactos (directores, gerentes)
+3. [HubSpot] Crear contactos y empresas
+4. [Gmail] Enviar propuesta comercial
+5. [Google Calendar] Agendar reuniones
+6. [Gamma] Preparar presentación personalizada
+```
