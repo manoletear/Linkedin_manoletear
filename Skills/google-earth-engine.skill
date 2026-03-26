@@ -1,0 +1,639 @@
+# Google Earth & Earth Engine - Skill de Conocimiento Completo
+
+## Descripción
+Conocimiento integral de Google Earth, Google Earth Engine, APIs, KML, Photorealistic 3D Tiles, y todo el ecosistema de herramientas geoespaciales de Google.
+
+---
+
+## 1. Ecosistema Google Earth
+
+| Producto | Descripción | Acceso |
+|----------|-------------|--------|
+| **Google Earth** | Visualización 3D del planeta (desktop, web, mobile) | earth.google.com |
+| **Google Earth Engine (GEE)** | Plataforma de análisis geoespacial a escala planetaria | earthengine.google.com |
+| **Google Maps Platform** | APIs de mapas, rutas, places para desarrolladores | developers.google.com/maps |
+| **Photorealistic 3D Tiles** | Tiles 3D fotorrealistas del mundo vía Map Tiles API | developers.google.com/maps/documentation/tile |
+| **KML/KMZ** | Formato XML para datos geográficos en Google Earth | developers.google.com/kml |
+
+---
+
+## 2. Google Earth Engine (GEE)
+
+### ¿Qué es?
+Plataforma de procesamiento geoespacial a escala planetaria, powered by Google Cloud. Combina:
+- **Catálogo de datos**: +80 petabytes de imágenes satelitales y datos geoespaciales
+- **Motor de cómputo**: Procesamiento distribuido en la infraestructura de Google
+- **APIs**: JavaScript y Python para análisis programático
+- **Code Editor**: IDE web para desarrollo interactivo
+
+### Estructuras de Datos Fundamentales:
+
+| Tipo | Clase | Descripción |
+|------|-------|-------------|
+| Raster | `ee.Image` | Imagen con bandas y propiedades (metadata) |
+| Raster Collection | `ee.ImageCollection` | Serie temporal de imágenes |
+| Vector | `ee.Feature` | Geometría + propiedades (diccionario) |
+| Vector Collection | `ee.FeatureCollection` | Colección de features |
+| Geometría | `ee.Geometry` | Point, LineString, Polygon, MultiPolygon |
+| Número | `ee.Number` | Número server-side |
+| String | `ee.String` | String server-side |
+| Lista | `ee.List` | Lista server-side |
+| Diccionario | `ee.Dictionary` | Diccionario server-side |
+| Reducer | `ee.Reducer` | Función de agregación |
+| Classifier | `ee.Classifier` | Clasificador ML |
+| Clusterer | `ee.Clusterer` | Algoritmo de clustering |
+
+### Concepto Clave: Client vs Server
+- **Client-side**: Código JavaScript/Python que se ejecuta en tu máquina
+- **Server-side**: Objetos `ee.*` que representan cómputos diferidos en servidores de Google
+- Imprimir un objeto `ee.*` en Python muestra la serialización del request, NO el resultado
+- Para obtener valores: usar `.getInfo()` (bloquea) o `.evaluate()` (async callback)
+
+---
+
+## 3. Conexión y Autenticación
+
+### 3.1 Python - Instalación y Conexión
+
+```bash
+# Instalar
+pip install earthengine-api --upgrade
+
+# En Google Colab ya viene preinstalado
+```
+
+```python
+import ee
+
+# OPCIÓN 1: Autenticación interactiva (para desarrollo)
+ee.Authenticate()  # Abre navegador para OAuth
+ee.Initialize(project='tu-proyecto-gcloud')
+
+# OPCIÓN 2: Google Colab (simplificado)
+ee.Authenticate()
+ee.Initialize(project='tu-proyecto-gcloud')
+
+# OPCIÓN 3: Service Account (para producción/apps)
+credentials = ee.ServiceAccountCredentials(
+    email='mi-service-account@proyecto.iam.gserviceaccount.com',
+    key_file='private-key.json'
+)
+ee.Initialize(credentials, project='tu-proyecto-gcloud')
+
+# OPCIÓN 4: Default credentials (en GCP VMs, App Engine, Cloud Functions)
+ee.Initialize(project='tu-proyecto-gcloud')
+
+# Verificar conexión
+image = ee.Image('USGS/SRTMGL1_003')
+print(image.getInfo())  # Debe retornar metadata del DEM
+```
+
+### 3.2 JavaScript - Code Editor
+
+```
+1. Ir a https://code.earthengine.google.com/
+2. Iniciar sesión con cuenta Google
+3. El proyecto Cloud se configura automáticamente
+4. Escribir código JavaScript directamente en el editor
+```
+
+```javascript
+// Ejemplo básico en Code Editor
+var image = ee.Image('USGS/SRTMGL1_003');
+print('SRTM:', image);
+Map.addLayer(image, {min: 0, max: 3000}, 'Elevation');
+Map.setCenter(-70.65, -33.45, 10); // Santiago, Chile
+```
+
+### 3.3 JavaScript - Client-Side Web Apps
+
+```html
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@google/earthengine/build/ee_api_js.bundle.js"></script>
+
+<script>
+// Autenticación OAuth en el navegador
+const CLIENT_ID = 'tu-client-id.apps.googleusercontent.com';
+
+ee.data.authenticateViaOauth(CLIENT_ID, () => {
+  ee.Initialize(null, null, () => {
+    // Earth Engine listo
+    var image = ee.Image('USGS/SRTMGL1_003');
+    // ... crear mapa con la librería de tu preferencia
+  });
+}, (error) => {
+  console.error('Auth failed:', error);
+});
+</script>
+```
+
+### 3.4 REST API Directa
+
+```
+# Endpoint estándar
+https://earthengine.googleapis.com
+
+# Endpoint de alto volumen (para uso programático intensivo)
+https://earthengine-highvolume.googleapis.com
+
+# Autenticación: Bearer token de Google Cloud
+Authorization: Bearer {access_token}
+```
+
+#### Endpoints REST principales:
+
+```bash
+# Compute pixels de una imagen
+POST https://earthengine.googleapis.com/v1/projects/{project}/image:computePixels
+
+# Get pixels de un asset
+GET https://earthengine.googleapis.com/v1/projects/{project}/assets/{assetId}:getPixels
+
+# Compute table (features)
+POST https://earthengine.googleapis.com/v1/projects/{project}/table:computeFeatures
+
+# Listar assets
+GET https://earthengine.googleapis.com/v1/projects/{project}/assets
+
+# Operaciones (batch tasks)
+GET https://earthengine.googleapis.com/v1/projects/{project}/operations
+```
+
+### 3.5 Requisitos de Acceso
+
+| Requisito | Detalle |
+|-----------|---------|
+| **Google Cloud Project** | Proyecto con Earth Engine API habilitada |
+| **Registro** | Proyecto registrado como comercial o no-comercial |
+| **Cuenta Google** | Para autenticación interactiva |
+| **Service Account** | Para apps de producción (JSON key file) |
+| **Cuota 2026** | Seleccionar tier antes del 27 abril 2026 (Community Tier por defecto) |
+
+---
+
+## 4. Catálogo de Datos (>80 Petabytes)
+
+### Datasets Principales:
+
+#### Imágenes Satelitales
+| Dataset | Colección | Resolución | Frecuencia |
+|---------|-----------|------------|------------|
+| **Landsat 9/8/7/5** | `LANDSAT/LC09/C02/T1_L2` | 30m | 16 días |
+| **Sentinel-2** | `COPERNICUS/S2_SR_HARMONIZED` | 10m | 5 días |
+| **Sentinel-1 SAR** | `COPERNICUS/S1_GRD` | 10m | 12 días |
+| **MODIS Terra/Aqua** | `MODIS/061/MOD09GA` | 250m-1km | Diario |
+| **VIIRS** | `NOAA/VIIRS/001/VNP09GA` | 500m | Diario |
+| **HLS (Landsat+Sentinel)** | `NASA/HLS/HLSL30/v002` | 30m | 2-3 días |
+| **Planet SkySat** | Colecciones SkySat | <1m | Variable |
+| **NAIP** | `USDA/NAIP/DOQQ` | 1m | Cada pocos años |
+
+#### DEMs (Modelos de Elevación)
+| Dataset | Colección | Resolución |
+|---------|-----------|------------|
+| **SRTM** | `USGS/SRTMGL1_003` | 30m |
+| **ALOS DEM** | `JAXA/ALOS/AW3D30/V3_2` | 30m |
+| **Copernicus DEM** | `COPERNICUS/DEM/GLO30` | 30m |
+| **FABDEM** | `GOOGLE/RESEARCH/OPEN_BUILDINGS/DEM` | 30m |
+
+#### Clima y Meteorología
+| Dataset | Colección | Descripción |
+|---------|-----------|-------------|
+| **ERA5** | `ECMWF/ERA5_LAND/MONTHLY_AGGR` | Reanálisis climático global |
+| **CHIRPS** | `UCSB-CHG/CHIRPS/DAILY` | Precipitación diaria |
+| **GridMET** | `IDAHO_EPSCOR/GRIDMET` | Meteorología gridded (EEUU) |
+| **MODIS LST** | `MODIS/061/MOD11A2` | Temperatura superficie terrestre |
+
+#### Cobertura de Suelo
+| Dataset | Colección | Descripción |
+|---------|-----------|-------------|
+| **Dynamic World** | `GOOGLE/DYNAMICWORLD/V1` | Cobertura near real-time 10m |
+| **ESA WorldCover** | `ESA/WorldCover/v200` | Cobertura global 10m |
+| **MODIS Land Cover** | `MODIS/061/MCD12Q1` | Cobertura anual 500m |
+| **Global Forest Change** | `UMD/hansen/global_forest_change_2023_v1_11` | Pérdida/ganancia de bosque |
+
+#### Índices y Productos Derivados
+- NDVI (vegetación), NDWI (agua), NBR (quemaduras), EVI, NDSI (nieve)
+- Emisiones de carbono, calidad del aire (Sentinel-5P)
+- Luces nocturnas (VIIRS, DMSP)
+- Población (WorldPop, GPWv4)
+
+---
+
+## 5. Operaciones Principales
+
+### 5.1 Filtrar Colecciones
+
+```javascript
+// JavaScript (Code Editor)
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  .filterDate('2024-01-01', '2024-06-30')        // Por fecha
+  .filterBounds(ee.Geometry.Point(-70.65, -33.45)) // Por ubicación (Santiago)
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)); // Por metadata
+```
+
+```python
+# Python
+collection = (ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+  .filterDate('2024-01-01', '2024-06-30')
+  .filterBounds(ee.Geometry.Point(-70.65, -33.45))
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)))
+```
+
+### 5.2 Calcular Índices Espectrales
+
+```javascript
+// NDVI con Sentinel-2
+var addNDVI = function(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI');
+  return image.addBands(ndvi);
+};
+var withNDVI = collection.map(addNDVI);
+```
+
+```python
+# Python
+def add_ndvi(image):
+    ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI')
+    return image.addBands(ndvi)
+
+with_ndvi = collection.map(add_ndvi)
+```
+
+### 5.3 Reducers (Agregación)
+
+```javascript
+// Composite: mediana de la colección
+var composite = collection.median();
+
+// Estadísticas por región
+var stats = composite.reduceRegion({
+  reducer: ee.Reducer.mean(),
+  geometry: region,
+  scale: 10,
+  maxPixels: 1e9
+});
+
+// Estadísticas zonales (múltiples regiones)
+var zonalStats = composite.reduceRegions({
+  collection: featureCollection,
+  reducer: ee.Reducer.mean(),
+  scale: 10
+});
+```
+
+```python
+# Python
+composite = collection.median()
+
+stats = composite.reduceRegion(
+    reducer=ee.Reducer.mean(),
+    geometry=region,
+    scale=10,
+    maxPixels=1e9
+)
+```
+
+### Reducers Disponibles:
+| Reducer | Descripción |
+|---------|-------------|
+| `ee.Reducer.mean()` | Promedio |
+| `ee.Reducer.median()` | Mediana |
+| `ee.Reducer.min()` / `.max()` | Mínimo / Máximo |
+| `ee.Reducer.sum()` | Suma |
+| `ee.Reducer.count()` | Conteo |
+| `ee.Reducer.stdDev()` | Desviación estándar |
+| `ee.Reducer.percentile([25,50,75])` | Percentiles |
+| `ee.Reducer.histogram()` | Histograma |
+| `ee.Reducer.linearRegression()` | Regresión lineal |
+| `ee.Reducer.first()` | Primer valor |
+| `ee.Reducer.mode()` | Moda |
+
+---
+
+## 6. Clasificación y Machine Learning
+
+### 6.1 Clasificación Supervisada
+
+```javascript
+// 1. Definir training data
+var training = composite.select(bands).sampleRegions({
+  collection: trainingPoints,  // FeatureCollection con propiedad 'class'
+  properties: ['class'],
+  scale: 10
+});
+
+// 2. Entrenar clasificador
+var classifier = ee.Classifier.smileRandomForest(100)  // 100 árboles
+  .train({
+    features: training,
+    classProperty: 'class',
+    inputProperties: bands
+  });
+
+// 3. Clasificar imagen
+var classified = composite.select(bands).classify(classifier);
+
+// 4. Evaluar precisión
+var validation = composite.select(bands).sampleRegions({
+  collection: validationPoints,
+  properties: ['class'],
+  scale: 10
+});
+var validated = validation.classify(classifier);
+var confusionMatrix = validated.errorMatrix('class', 'classification');
+print('Accuracy:', confusionMatrix.accuracy());
+print('Kappa:', confusionMatrix.kappa());
+```
+
+### Clasificadores Disponibles:
+| Clasificador | Función | Descripción |
+|-------------|---------|-------------|
+| **Random Forest** | `ee.Classifier.smileRandomForest(nTrees)` | Ensemble de árboles de decisión |
+| **CART** | `ee.Classifier.smileCart()` | Árbol de clasificación y regresión |
+| **SVM** | `ee.Classifier.libsvm()` | Support Vector Machine |
+| **Naive Bayes** | `ee.Classifier.smileNaiveBayes()` | Bayesiano ingenuo |
+| **Gradient Boosting** | `ee.Classifier.smileGradientTreeBoost(nTrees)` | Gradient boosting trees |
+| **KNN** | `ee.Classifier.smileKNN(k)` | K-Nearest Neighbors |
+
+### 6.2 Clasificación No Supervisada (Clustering)
+
+```javascript
+// K-Means clustering
+var training = composite.sample({region: aoi, scale: 10, numPixels: 5000});
+
+var clusterer = ee.Clusterer.wekaKMeans(5)  // 5 clusters
+  .train(training);
+
+var clustered = composite.cluster(clusterer);
+Map.addLayer(clustered.randomVisualizer(), {}, 'Clusters');
+```
+
+### Clusterers Disponibles:
+| Clusterer | Función | Descripción |
+|-----------|---------|-------------|
+| **K-Means** | `ee.Clusterer.wekaKMeans(k)` | K-Means estándar |
+| **Cascade K-Means** | `ee.Clusterer.wekaCascadeKMeans(minK, maxK)` | K-Means con K óptimo automático |
+| **X-Means** | `ee.Clusterer.wekaXMeans(minK, maxK)` | Extensión de K-Means |
+| **LVQ** | `ee.Clusterer.wekaLVQ(k)` | Learning Vector Quantization |
+
+### Límites de ML:
+- Efectivo hasta ~100 MB de datos de entrenamiento
+- Con 100 bandas: máximo ~200,000 muestras
+- Deep learning NO soportado nativo → exportar a TFRecord para TensorFlow/PyTorch
+- Modelos externos vía `ee.Model` con Vertex AI
+
+---
+
+## 7. Exportación de Datos
+
+### Exportar a Google Drive:
+```javascript
+// Imagen a Drive
+Export.image.toDrive({
+  image: classified,
+  description: 'clasificacion_santiago',
+  folder: 'EarthEngine',
+  region: aoi,
+  scale: 10,
+  crs: 'EPSG:32719',
+  maxPixels: 1e13
+});
+
+// Tabla a Drive
+Export.table.toDrive({
+  collection: featureCollection,
+  description: 'datos_vectoriales',
+  folder: 'EarthEngine',
+  fileFormat: 'GeoJSON'  // o CSV, SHP, KML
+});
+```
+
+### Exportar a Google Cloud Storage:
+```javascript
+Export.image.toCloudStorage({
+  image: composite,
+  description: 'composite_s2',
+  bucket: 'mi-bucket-gcs',
+  fileNamePrefix: 'composites/santiago_2024',
+  region: aoi,
+  scale: 10,
+  crs: 'EPSG:32719',
+  fileFormat: 'GeoTIFF'
+});
+```
+
+### Exportar como Asset de Earth Engine:
+```javascript
+Export.image.toAsset({
+  image: classified,
+  description: 'clasificacion_asset',
+  assetId: 'projects/mi-proyecto/assets/clasificacion_santiago',
+  region: aoi,
+  scale: 10,
+  crs: 'EPSG:32719'
+});
+```
+
+### Cloud Optimized GeoTIFF (COG):
+```python
+# Cargar COG directamente desde Cloud Storage
+image = ee.Image.loadGeoTIFF('gs://mi-bucket/mi-imagen.tif')
+```
+
+---
+
+## 8. Charts y Visualización
+
+### Series Temporales:
+```javascript
+// NDVI a lo largo del tiempo para un punto
+var chart = ui.Chart.image.series({
+  imageCollection: withNDVI.select('NDVI'),
+  region: ee.Geometry.Point(-70.65, -33.45),
+  reducer: ee.Reducer.mean(),
+  scale: 10
+}).setOptions({title: 'NDVI Time Series', vAxis: {title: 'NDVI'}});
+print(chart);
+```
+
+### Tipos de Charts:
+| Chart | Uso |
+|-------|-----|
+| `ui.Chart.image.series` | Serie temporal por banda |
+| `ui.Chart.image.seriesByRegion` | Serie temporal comparando regiones |
+| `ui.Chart.image.doySeries` | Perfil día-del-año (estacionalidad) |
+| `ui.Chart.image.doySeriesByYear` | Comparar años por día-del-año |
+| `ui.Chart.image.histogram` | Histograma de valores |
+| `ui.Chart.image.byClass` | Perfil espectral por clase |
+| `ui.Chart.feature.byFeature` | Gráfico de features |
+| `ui.Chart.feature.byProperty` | Gráfico por propiedad |
+| `ui.Chart.feature.groups` | Gráfico agrupado |
+
+---
+
+## 9. Earth Engine Apps
+
+### Publicar App desde Code Editor:
+```javascript
+// Crear UI
+var panel = ui.Panel({style: {width: '300px'}});
+var slider = ui.Slider({min: 0, max: 1, value: 0.3, step: 0.1});
+var button = ui.Button({label: 'Analizar', onClick: runAnalysis});
+
+panel.add(ui.Label('Mi App de Análisis'));
+panel.add(slider);
+panel.add(button);
+ui.root.add(panel);
+```
+- Publicar vía Code Editor: Assets → Scripts → Publish
+- Se despliega en: `{username}.users.earthengine.app/view/{appname}`
+
+### Desplegar en App Engine:
+- Usar Service Account para autenticación server-side
+- Usuarios NO necesitan ser usuarios registrados de Earth Engine
+- Ejemplo: Flask/Django backend + Earth Engine + Maps frontend
+
+---
+
+## 10. KML/KMZ
+
+### Estructura KML básica:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Mi Mapa</name>
+    <Placemark>
+      <name>Santiago</name>
+      <description>Capital de Chile</description>
+      <Point>
+        <coordinates>-70.6506,-33.4489,0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>Área de estudio</name>
+      <Polygon>
+        <outerBoundaryIs>
+          <LinearRing>
+            <coordinates>
+              -70.68,-33.47,0
+              -70.63,-33.47,0
+              -70.63,-33.42,0
+              -70.68,-33.42,0
+              -70.68,-33.47,0
+            </coordinates>
+          </LinearRing>
+        </outerBoundaryIs>
+      </Polygon>
+    </Placemark>
+  </Document>
+</kml>
+```
+
+### Uso en Google Maps JavaScript API:
+```javascript
+var kmlLayer = new google.maps.KmlLayer({
+  url: 'https://mi-servidor.com/datos.kml',
+  map: map
+});
+```
+
+### Límites KML en Google Maps:
+- Archivo: 3MB comprimido, 10MB descomprimido
+- Imágenes: 500KB por KMZ
+- Features: 1,000 por documento
+- Network links: máximo 10
+
+---
+
+## 11. Photorealistic 3D Tiles
+
+### Acceso:
+```
+Root tileset URL:
+https://tile.googleapis.com/v1/3dtiles/root.json?key={API_KEY}
+```
+
+### Integración con CesiumJS:
+```javascript
+const viewer = new Cesium.Viewer('cesiumContainer');
+const tileset = viewer.scene.primitives.add(
+  new Cesium.Cesium3DTileset({
+    url: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${API_KEY}`
+  })
+);
+```
+
+### Integración con deck.gl:
+```javascript
+import {Tile3DLayer} from '@deck.gl/geo-layers';
+
+const layer = new Tile3DLayer({
+  id: 'google-3d-tiles',
+  data: `https://tile.googleapis.com/v1/3dtiles/root.json?key=${API_KEY}`,
+  loadOptions: {
+    fetch: {headers: {'X-GOOG-API-KEY': API_KEY}}
+  }
+});
+```
+
+### Renderers soportados:
+- CesiumJS (v1.91+)
+- Cesium for Unreal (v1.12+)
+- Cesium for Unity
+- deck.gl (v8.9.13+)
+- Formato: OGC 3D Tiles standard (glTF)
+
+---
+
+## 12. Conexión Earth Engine ↔ ArcGIS
+
+### Exportar de GEE a ArcGIS:
+```python
+import ee
+from arcgis.gis import GIS
+from arcgis.features import FeatureLayer
+
+# 1. Exportar de Earth Engine a GeoJSON/GeoTIFF
+ee.Initialize(project='mi-proyecto')
+collection = ee.FeatureCollection('...')
+task = ee.batch.Export.table.toDrive(
+    collection=collection,
+    description='export',
+    fileFormat='GeoJSON'
+)
+task.start()
+
+# 2. Subir a ArcGIS Online
+gis = GIS("https://www.arcgis.com", "user", "pass")
+item = gis.content.add({"title": "Datos GEE"}, data="export.geojson")
+published = item.publish()
+```
+
+### Usar servicios ArcGIS en Earth Engine:
+```python
+# Cargar FeatureCollection desde URL (GeoJSON endpoint)
+# Earth Engine puede consumir datos vectoriales vía ee.FeatureCollection
+fc = ee.FeatureCollection('projects/mi-proyecto/assets/datos_arcgis')
+```
+
+---
+
+## 13. URLs de Referencia
+
+| Recurso | URL |
+|---------|-----|
+| Earth Engine Home | https://earthengine.google.com/ |
+| Code Editor | https://code.earthengine.google.com/ |
+| Guides | https://developers.google.com/earth-engine/guides |
+| API Reference | https://developers.google.com/earth-engine/apidocs |
+| REST API | https://developers.google.com/earth-engine/reference/rest |
+| Data Catalog | https://developers.google.com/earth-engine/datasets |
+| Python Install | https://developers.google.com/earth-engine/guides/python_install |
+| Authentication | https://developers.google.com/earth-engine/guides/auth |
+| Service Accounts | https://developers.google.com/earth-engine/guides/service_account |
+| Exporting Data | https://developers.google.com/earth-engine/guides/exporting |
+| Apps | https://developers.google.com/earth-engine/guides/apps |
+| KML Documentation | https://developers.google.com/kml/documentation |
+| 3D Tiles | https://developers.google.com/maps/documentation/tile/3d-tiles |
+| Maps JS API | https://developers.google.com/maps/documentation/javascript |
