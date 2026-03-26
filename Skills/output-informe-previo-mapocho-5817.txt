@@ -1,0 +1,260 @@
+================================================================================
+         CERTIFICADO DE INFORME PREVIO - REFERENCIAL
+         MUNICIPALIDAD DE QUINTA NORMAL
+         Dirección de Obras Municipales
+================================================================================
+
+Fecha de emisión:       26 de marzo de 2026
+N° de certificado:      REF-QN-2026-XXXX (Referencial - No oficial)
+
+================================================================================
+1. IDENTIFICACIÓN DEL PREDIO
+================================================================================
+
+Dirección:              Mapocho 5817, Quinta Normal
+Comuna:                 Quinta Normal
+Provincia:              Santiago
+Región:                 Metropolitana de Santiago
+País:                   Chile
+
+Coordenadas WGS84:     Latitud  -33.4285 (aprox.)
+                        Longitud -70.7037 (aprox.)
+Referencia:             Sector Av. Mapocho poniente, cercano a
+                        parada Radal/Mapocho y Metro Blanqueado (L5)
+Código Postal:          Sector 850xxxx (Quinta Normal)
+
+================================================================================
+2. ZONIFICACIÓN SEGÚN PLAN REGULADOR COMUNAL
+================================================================================
+
+Instrumento vigente:    Plan Regulador Comunal de Quinta Normal
+                        Aprobado: Octubre 2019
+                        Decreto N°649/2002 (PRC original)
+                        + Modificaciones posteriores
+                        + Enmienda 01 (Decreto N°1653/25)
+                        + Modificación 01 en trámite (MPRC-QN-2019-01)
+
+Instrumento metropolitano: Plan Regulador Metropolitano de Santiago (PRMS)
+
+Zona de Edificación:    Zona SC (Sector Comunal) / Zona Mixta
+                        (VERIFICAR en Visor Territorial ArcGIS:
+                        https://www.arcgis.com/apps/mapviewer/index.html
+                        ?webmap=f54b59d26505450d9cb2f85e29fd6dc4)
+
+NOTA IMPORTANTE: La ubicación exacta en Av. Mapocho 5817 debe
+verificarse en el visor territorial ArcGIS para confirmar la zona
+específica del PRC que aplica al predio.
+
+================================================================================
+3. NORMAS URBANÍSTICAS APLICABLES (REFERENCIALES)
+================================================================================
+
+Las normas se indican como rango referencial basado en la información
+disponible del PRC de Quinta Normal y datos de mercado del sector.
+
+A) NORMAS SEGÚN ZONA SC / MIXTA DEL PRC:
+--------------------------------------------------------------------------------
+| Norma                              | Valor Referencial                      |
+|-------------------------------------|----------------------------------------|
+| Tipología de edificación            | Aislada / Pareada / Continua           |
+|                                     | (según zona específica)                |
+| Densidad bruta máxima               | Hasta 2,200 hab/ha (en zonas densas)   |
+|                                     | (verificar según zona del predio)      |
+| Subdivisión predial mínima          | Según zona (consultar Ordenanza)       |
+| Coeficiente de constructibilidad    | Hasta 3.5 (en zonas de alta densidad)  |
+|                                     | Referencial zona mixta: 1.5 - 3.5     |
+| Coeficiente de ocupación de suelo   | Hasta 0.7 (en zonas de alta densidad)  |
+|                                     | Referencial: 0.5 - 0.7                |
+| Altura máxima                       | 5 pisos / 13.0 m (zona restrictiva)   |
+|                                     | Hasta 8 pisos (zona alta densidad)     |
+| Rasante                             | Según OGUC (70° sobre eje medianero)   |
+| Antejardín                          | Según zona (consultar Ordenanza)       |
+| Distanciamiento                     | Según OGUC y rasante aplicable         |
+--------------------------------------------------------------------------------
+
+B) RESTRICCIONES ESPECIALES:
+--------------------------------------------------------------------------------
+- Se postergaron permisos de edificación para alturas superiores a
+  5 pisos (13 metros) en parte del territorio de la Zona SC.
+  Verificar estado vigente de esta postergación.
+
+- El PRC de 2019 incorporó protección patrimonial, declarando
+  inmuebles de conservación histórica (ej: Basílica de Lourdes)
+  con polígonos de zonas de influencia.
+
+- Verificar si el predio está afecto a fajas de vialidad del PRMS
+  (Av. Mapocho es vía estructurante metropolitana).
+--------------------------------------------------------------------------------
+
+C) CONTEXTO HISTÓRICO:
+--------------------------------------------------------------------------------
+- Antes del PRC 2019, Quinta Normal se regía por el PRMS de 1981,
+  lo que permitió construcción de edificios de hasta 30+ pisos.
+- El nuevo PRC busca regular alturas y densidades para un
+  desarrollo urbano más armónico.
+--------------------------------------------------------------------------------
+
+================================================================================
+4. USOS DE SUELO (REFERENCIALES)
+================================================================================
+
+Basado en la zonificación general del PRC de Quinta Normal para
+zonas mixtas a lo largo de Av. Mapocho:
+
+USOS PERMITIDOS (referencial):
+  [P] Residencial:
+      - Vivienda unifamiliar
+      - Vivienda colectiva / edificios de departamentos
+      - Vivienda en densidad
+
+  [P] Equipamiento:
+      - Comercio (retail, locales comerciales)
+      - Oficinas
+      - Servicios (bancos, centros médicos, farmacias)
+      - Educación
+      - Salud
+      - Culto y cultura
+      - Deporte y recreación
+
+  [P] Actividades productivas inofensivas
+
+  [P] Infraestructura (según OGUC)
+
+USOS PROBABLEMENTE CONDICIONADOS:
+  [C] Equipamiento de escala mayor
+  [C] Establecimientos de esparcimiento nocturno
+  [C] Talleres artesanales
+
+USOS PROBABLEMENTE PROHIBIDOS:
+  [X] Industria molesta o peligrosa
+  [X] Bodegaje a gran escala
+  [X] Actividades productivas molestas
+  [X] Extracción de áridos
+
+NOTA: Los usos exactos deben verificarse en la Ordenanza del PRC
+vigente para la zona específica del predio.
+
+================================================================================
+5. VIALIDAD
+================================================================================
+
+Vía:                    Avenida Mapocho
+Clasificación PRMS:     Vía Colectora / Estructurante
+Tipo:                   Calle bidireccional
+Afectación:             Verificar faja de utilidad pública en
+                        Plano de Vialidad del PRC
+Transporte público:     Líneas de buses (414E, C10E, C14, C28, C30E)
+Metro cercano:          Estación Blanqueado (Línea 5) - ~1.5 km al sur
+
+================================================================================
+6. DATOS COMUNALES - QUINTA NORMAL
+================================================================================
+
+  Superficie comunal:           12.4 km²
+  Población (Censo 2017):       ~110,026 habitantes
+  Densidad:                     ~8,873 hab/km²
+  Tipo de comuna:               Urbana consolidada, pericentral
+  Característica:               Comuna residencial-mixta en proceso
+                                de densificación y renovación urbana
+
+  Sector Av. Mapocho poniente:
+  - Uso predominante:           Residencial-comercial mixto
+  - Tipología:                  Viviendas 1-2 pisos + edificios recientes
+  - Equipamiento cercano:       Comercio barrial, ferretería Imperial,
+                                Parque Cultural Casona Dubois,
+                                Biblioteca Pública Quinta Normal
+
+================================================================================
+7. SERVICIOS GIS CONSULTADOS
+================================================================================
+
+| Servicio                          | URL / Recurso                          |
+|-----------------------------------|----------------------------------------|
+| PRC Metropolitana (FeatureServer) | services3.arcgis.com/cTnMkBRk4HWkUCRo |
+|                                   | /ArcGIS/rest/services/PRC_Metropolitana|
+|                                   | /FeatureServer                         |
+| Visor Territorial PRC QN          | arcgis.com/apps/mapviewer/index.html   |
+|                                   | ?webmap=f54b59d26505450d9cb2f85e29fd6dc4|
+| Visor Proyectos Municipales       | arcgis.com/apps/mapviewer/index.html   |
+|                                   | ?webmap=86d79dbd79834613a1f8eb9e7c57566d|
+| PRMS 2010 (ArcGIS Hub)           | hub.arcgis.com/datasets/               |
+|                                   | 0fe7748277904a148db2bb06161eee6d_0     |
+| Geoportal MINVU                   | ide.minvu.cl                           |
+| IDE Chile                         | geoportal.cl                           |
+
+================================================================================
+8. DOCUMENTACIÓN DE REFERENCIA
+================================================================================
+
+- Ordenanza PRC Quinta Normal:
+  https://ligup-v2.s3.amazonaws.com/quintanormal/multimedia/
+  68765_ordenanza_plan_regulador_comunal.pdf
+
+- Memoria Explicativa PRC (Tomo I):
+  https://ligup-v2.s3.amazonaws.com/quintanormal/multimedia/
+  68765_memoria_explicativa_tomo_i.pdf
+
+- Modificación PRC - Evaluación Ambiental:
+  https://eae.mma.gob.cl/storage/documents/
+  02_IA_PRC_Quinta_Normal.pdf.pdf
+
+- PRC Quinta Normal (Decreto original):
+  https://www.quintanormal.cl/wp-content/uploads/2016/02/
+  plan-regulador_192.pdf
+
+- Diario Oficial (Enero 2019):
+  https://www.diariooficial.interior.gob.cl/publicaciones/
+  2019/01/18/42257/01/1530092.pdf
+
+- Página municipal Plan Regulador:
+  https://www.quintanormal.cl/secciones/5482
+
+- Visor Territorial ArcGIS (Mod.01):
+  https://www.arcgis.com/apps/mapviewer/index.html
+  ?webmap=f54b59d26505450d9cb2f85e29fd6dc4
+
+- Consulta de zonificación:
+  https://www.zonificacion.cl/
+
+================================================================================
+9. OBSERVACIONES
+================================================================================
+
+1. ESTE DOCUMENTO ES REFERENCIAL Y NO CONSTITUYE UN CERTIFICADO OFICIAL.
+   Para obtener el Certificado de Informaciones Previas oficial, debe
+   solicitarse en la Dirección de Obras Municipales (DOM) de la
+   Ilustre Municipalidad de Quinta Normal.
+
+2. La zonificación exacta del predio DEBE VERIFICARSE en el Visor
+   Territorial ArcGIS del PRC de Quinta Normal o directamente en la DOM.
+   URL: https://www.arcgis.com/apps/mapviewer/index.html
+   ?webmap=f54b59d26505450d9cb2f85e29fd6dc4
+
+3. Quinta Normal cuenta con un PRC actualizado (2019) que reemplazó
+   las normas subsidiarias del PRMS que permitían construcción sin
+   límites adecuados de altura y densidad. Verificar que las normas
+   referidas correspondan al PRC vigente y no al anterior.
+
+4. El predio podría estar afecto a:
+   - Fajas de vialidad del PRMS (Av. Mapocho)
+   - Zonas de protección patrimonial
+   - Restricción de altura (postergación de permisos > 5 pisos)
+   - Zona de influencia de inmuebles de conservación histórica
+
+5. La Enmienda 01 (Decreto N°1653/25) podría haber modificado normas.
+   Verificar texto vigente actualizado.
+
+6. Para proyectos inmobiliarios, se recomienda consultar directamente
+   con la DOM de Quinta Normal y solicitar el Certificado de
+   Informaciones Previas oficial (CIP), que tiene validez legal
+   de 180 días según la LGUC.
+
+7. Las coordenadas del predio son aproximadas. Se recomienda verificar
+   con levantamiento topográfico o consulta catastral en el SII.
+
+================================================================================
+         GENERADO CON SKILLS ArcGIS - Análisis Territorial Automatizado
+         Fuentes: PRC_Metropolitana FeatureServer + Ordenanza PRC QN 2019
+                  + PRMS 2010 + Visores Territoriales ArcGIS
+         Fecha: 26 de marzo de 2026
+================================================================================
