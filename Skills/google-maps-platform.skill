@@ -5,7 +5,70 @@ Conocimiento exhaustivo de toda la plataforma Google Maps: APIs web, JavaScript 
 
 ---
 
-## 1. Ecosistema de APIs
+## 1. Catálogo Completo de APIs por Plataforma
+
+Fuente: https://developers.google.com/maps/apis-by-platform
+
+### Web (Frontend)
+| API | Descripción | Costo |
+|-----|-------------|-------|
+| **Maps JavaScript API** | Mapas interactivos 2D/3D con marcadores, capas, servicios | $7/1K loads |
+| **Maps Embed API** | Mapas embebidos con iframe, sin código ni cuota | **GRATIS** |
+| **Maps Static API** | Imágenes estáticas de mapas vía URL | $2/1K |
+| **Street View Static API** | Imágenes estáticas de Street View | $7/1K |
+| **Places Library (JS)** | Información de lugares integrada en Maps JS | Incluido |
+
+### Android
+| SDK | Descripción |
+|-----|-------------|
+| **Maps SDK for Android** | Mapas nativos para apps Android |
+| **Places SDK for Android** | Búsqueda de lugares para Android |
+| **Navigation SDK for Android** | Navegación turn-by-turn nativa |
+
+### iOS
+| SDK | Descripción |
+|-----|-------------|
+| **Maps SDK for iOS** | Mapas nativos para apps iOS |
+| **Places SDK for iOS** | Búsqueda de lugares para iOS |
+| **Navigation SDK for iOS** | Navegación turn-by-turn nativa |
+
+### Web Services (REST APIs)
+| API | Descripción | URL Doc |
+|-----|-------------|---------|
+| **Geocoding API** | Dirección ↔ coordenadas, Place IDs | /documentation/geocoding |
+| **Places API (New)** | Buscar lugares, detalles, fotos, autocomplete | /documentation/places/web-service |
+| **Routes API** | Rutas optimizadas (reemplaza Directions+Distance Matrix) | /documentation/routes |
+| **Directions API (Legacy)** | Direcciones punto a punto con waypoints | /documentation/directions |
+| **Distance Matrix API (Legacy)** | Matriz de distancias y tiempos | /documentation/distance-matrix |
+| **Elevation API** | Elevación de cualquier punto del mundo | /documentation/elevation |
+| **Address Validation API** | Validar direcciones y componentes (CASS™) | /documentation/address-validation |
+| **Aerial View API** | Videos aéreos cinematográficos con 3D geoespacial de Google | /documentation/aerial-view |
+| **Air Quality API** | Calidad del aire: +70 índices, +100 países, 500×500m resolución | /documentation/air-quality |
+| **Geolocation API** | Ubicación por torres celulares y nodos WiFi | /documentation/geolocation |
+| **Map Tiles API** | Tiles 2D, Photorealistic 3D Tiles, Street View Tiles | /documentation/tile |
+| **Maps Datasets API** | Subir y gestionar datos geoespaciales para data-driven styling | /documentation/datasets |
+| **Pollen API** | Tipos de polen, plantas, índices, pronóstico 5 días, +65 países | /documentation/pollen |
+| **Roads API** | Snap-to-road para GPS, velocidades máximas | /documentation/roads |
+| **Route Optimization API** | Optimización multi-parada para uno o más vehículos | /documentation/route-optimization |
+| **Solar API** | Potencial solar de edificios (HIGH: 0.1m/px, MEDIUM: 0.25m/px) | /documentation/solar |
+| **Time Zone API** | Zona horaria por coordenadas | /documentation/timezone |
+| **Weather API** | Clima actual, pronóstico horario/diario, historial | /documentation/weather |
+| **Maps URLs** | Lanzar Google Maps con acciones (search, directions) | /documentation/urls |
+
+### Cross-Platform
+| Herramienta | Descripción |
+|-------------|-------------|
+| **Maps URLs** | URLs universales para abrir Google Maps desde cualquier plataforma |
+| **Street View Publish API** | Subir fotos 360° a Google Street View |
+
+### APIs Nuevas (2025-2026):
+- **Weather API**: Condiciones actuales, pronóstico horario y diario, historial horario para ubicaciones globales
+- **Route Optimization API**: Optimización inteligente de rutas multi-parada para flotas
+- **Aerial View API**: Videos aéreos cinematográficos renderizados con 3D geoespacial de Google
+
+---
+
+## 1b. Resumen del Ecosistema (Vista Rápida)
 
 | API | Descripción | Tipo |
 |-----|-------------|------|
