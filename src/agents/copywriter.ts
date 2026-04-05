@@ -1,6 +1,7 @@
 import { v4 as uuid } from "uuid";
 import { GridOption, DraftPost, UserContentProfile } from "../types";
 import { llmCompleteJSON } from "../services/llmService";
+import { getLearningContext } from "./learningLoop";
 import { readFileSync } from "fs";
 import { join } from "path";
 
@@ -14,6 +15,14 @@ export async function generateDrafts(
   profile: UserContentProfile,
   count: number = 3
 ): Promise<DraftPost[]> {
+  // Inyectar contexto de aprendizaje si hay historial
+  let learningContext = "";
+  try {
+    learningContext = await getLearningContext();
+  } catch {
+    // No learning context available, continue without it
+  }
+
   const raw = await llmCompleteJSON<
     {
       hook: string;
@@ -22,10 +31,10 @@ export async function generateDrafts(
       hashtags?: string[];
     }[]
   >(
-    COPYWRITER_PROMPT,
+    COPYWRITER_PROMPT + (learningContext ? `\n\n${learningContext}` : ""),
     `Noticia: ${option.headline}
-Ángulo editorial: ${option.angle}
-Razón de priorización: ${option.reason}
+Angulo editorial: ${option.angle}
+Razon de priorizacion: ${option.reason}
 Formato: ${option.format}
 
 Perfil del autor:
@@ -34,15 +43,15 @@ Audiencia: ${profile.targetAudience}
 Tono: ${profile.preferredTone}
 Objetivo: ${profile.publishingGoal}
 
-Genera exactamente ${count} versiones MUY distintas entre sí.
-Cada versión debe variar en: hook, estructura argumental, nivel de contundencia y cierre.
+Genera exactamente ${count} versiones MUY distintas entre si.
+Cada version debe variar en: hook, estructura argumental, nivel de contundencia y cierre.
 
 Responde con un array JSON:
 [
   {
-    "hook": "primera línea que captura atención",
-    "body": "desarrollo con interpretación propia",
-    "closing": "cierre con pregunta o tensión abierta",
+    "hook": "primera linea que captura atencion",
+    "body": "desarrollo con interpretacion propia",
+    "closing": "cierre con pregunta o tension abierta",
     "hashtags": ["tag1", "tag2"]
   }
 ]`

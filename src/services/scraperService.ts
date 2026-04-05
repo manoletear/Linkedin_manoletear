@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from "playwright";
+import { chromium, Browser } from "playwright";
 import { RawNewsItem } from "../types";
 import { logger } from "./logger";
 
@@ -15,7 +15,7 @@ export type ScrapingTarget = {
   };
 };
 
-// Consultoras y portales especializados en IA
+// Hardcoded defaults (used when Supabase is not configured)
 export const DEFAULT_TARGETS: ScrapingTarget[] = [
   {
     name: "McKinsey - AI",
@@ -132,8 +132,6 @@ async function scrapeTarget(target: ScrapingTarget): Promise<RawNewsItem[]> {
       waitUntil: "domcontentloaded",
       timeout: 30000,
     });
-
-    // Wait for content to render
     await page.waitForTimeout(3000);
 
     const articles = await page.$$(target.selectors.articleList);
@@ -217,13 +215,45 @@ function parseDateSafe(dateStr: string): string {
   }
 }
 
+/**
+ * Load targets from Supabase if configured, otherwise use hardcoded defaults.
+ */
+export async function loadTargets(): Promise<ScrapingTarget[]> {
+  try {
+    const { env } = await import("../config/env");
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+      return DEFAULT_TARGETS;
+    }
+
+    const { supabase } = await import("../lib/supabase");
+    const { data, error } = await supabase
+      .from("scraping_targets")
+      .select("*")
+      .eq("active", true);
+
+    if (error || !data?.length) {
+      logger.info("Using hardcoded scraping targets (Supabase not available or empty)");
+      return DEFAULT_TARGETS;
+    }
+
+    logger.info(`Loaded ${data.length} scraping targets from Supabase`);
+    return data.map((row: any) => ({
+      name: row.name,
+      url: row.url,
+      selectors: row.selectors,
+    }));
+  } catch {
+    return DEFAULT_TARGETS;
+  }
+}
+
 export async function scrapeTargets(
-  targets: ScrapingTarget[] = DEFAULT_TARGETS
+  targets?: ScrapingTarget[]
 ): Promise<RawNewsItem[]> {
+  const activeTargets = targets || (await loadTargets());
   const allItems: RawNewsItem[] = [];
 
-  // Scrape sequentially to avoid rate limiting
-  for (const target of targets) {
+  for (const target of activeTargets) {
     const items = await scrapeTarget(target);
     allItems.push(...items);
   }
@@ -231,7 +261,7 @@ export async function scrapeTargets(
   await closeBrowser();
 
   logger.info(
-    `Scraper: ${allItems.length} items from ${targets.length} targets`
+    `Scraper: ${allItems.length} items from ${activeTargets.length} targets`
   );
   return allItems;
 }
@@ -249,7 +279,6 @@ export async function scrapeArticleContent(url: string): Promise<string> {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForTimeout(2000);
 
-    // Try common article body selectors
     const selectors = [
       "article",
       "[class*='article-body']",
@@ -269,7 +298,6 @@ export async function scrapeArticleContent(url: string): Promise<string> {
       }
     }
 
-    // Fallback: get all visible paragraph text
     const paragraphs = await page.$$eval("p", (ps) =>
       ps.map((p) => p.textContent?.trim() || "").filter((t) => t.length > 50)
     );
