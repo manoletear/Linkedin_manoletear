@@ -8,6 +8,8 @@
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
     "test:pipeline": "ts-node src/test-pipeline.ts",
+    "test:full": "ts-node src/test-full-pipeline.ts",
+    "capture:metrics": "ts-node src/capture-metrics.ts",
     "generate:image": "ts-node src/generate-image.ts",
     "generate:pdf": "ts-node src/create-pdf.ts",
     "db:push": "supabase db push"
