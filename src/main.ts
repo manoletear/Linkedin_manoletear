@@ -8,7 +8,8 @@ import { buildGrid } from "./agents/gridGenerator";
 import { generateDrafts } from "./agents/copywriter";
 import { rankDrafts } from "./agents/editorialCritic";
 import { publish } from "./agents/linkedinPublisher";
-import { savePublishedPost } from "./storage/performanceStore";
+import { prepareImageAsset, preparePdfAsset, uploadAsset, MediaAsset } from "./agents/mediaHandler";
+import { savePublishedPost, saveNewsItem } from "./storage/performanceStore";
 import { logger } from "./services/logger";
 import * as readline from "readline";
 
@@ -28,10 +29,10 @@ function displayGrid(grid: GridOption[]) {
 
   grid.forEach((option, i) => {
     console.log(`  [${i + 1}] ${option.headline}`);
-    console.log(`      Ángulo: ${option.angle}`);
+    console.log(`      Angulo: ${option.angle}`);
     console.log(`      Formato: ${option.format}`);
     console.log(`      Engagement estimado: ${option.estimatedEngagement}/100`);
-    console.log(`      Razón: ${option.reason}`);
+    console.log(`      Razon: ${option.reason}`);
     console.log();
   });
 }
@@ -43,8 +44,8 @@ function displayDrafts(
   console.log("  BORRADORES");
   console.log("──────────────────────────────────────────\n");
 
-  drafts.forEach(({ draft, evaluation }, i) => {
-    console.log(`  ── Borrador ${draft.variant} (Score: ${evaluation.totalScore}/50) ──`);
+  drafts.forEach(({ draft, evaluation }) => {
+    console.log(`  -- Borrador ${draft.variant} (Score: ${evaluation.totalScore}/50) --`);
     console.log();
     console.log(draft.fullText);
     console.log();
@@ -57,7 +58,7 @@ function displayDrafts(
 export async function run(profile: UserContentProfile) {
   try {
     // Paso 1-2: Recolectar noticias
-    console.log("\n⏳ Recolectando noticias...");
+    console.log("\n Recolectando noticias...");
     const rawNews = await NewsCollector.collect(profile);
 
     if (rawNews.length === 0) {
@@ -66,37 +67,49 @@ export async function run(profile: UserContentProfile) {
     }
 
     // Paso 3: Normalizar y deduplicar
-    console.log("⏳ Normalizando y deduplicando...");
+    console.log("Normalizando y deduplicando...");
     const normalized = await normalizeBatch(rawNews);
     const deduped = deduplicate(normalized);
-    console.log(`  ${rawNews.length} → ${normalized.length} → ${deduped.length} noticias únicas`);
+    console.log(`  ${rawNews.length} -> ${normalized.length} -> ${deduped.length} noticias unicas`);
+
+    // Persistir noticias en Supabase
+    for (const item of deduped.slice(0, 20)) {
+      await saveNewsItem({
+        source: item.source,
+        title: item.title,
+        url: item.url,
+        summary: item.summary,
+        publishedAt: item.publishedAt,
+        canonicalText: item.canonicalText,
+      });
+    }
 
     // Paso 4: Rankear
-    console.log("⏳ Rankeando por valor editorial...");
+    console.log("Rankeando por valor editorial...");
     const ranked = rank(deduped, profile);
 
-    // Paso 5: Filtrar señal baja
-    console.log("⏳ Evaluando valor editorial...");
+    // Paso 5: Filtrar senal baja
+    console.log("Evaluando valor editorial...");
     const publishable = await filterLowSignal(ranked, profile);
 
     if (publishable.length === 0) {
-      console.log("Ninguna noticia alcanzó el umbral editorial. Intenta con otro sector o fuentes.");
+      console.log("Ninguna noticia alcanzo el umbral editorial. Intenta con otro sector o fuentes.");
       return;
     }
 
     // Paso 6: Generar grilla
-    console.log("⏳ Generando grilla editorial...");
+    console.log("Generando grilla editorial...");
     const grid = await buildGrid(publishable, profile);
     displayGrid(grid);
 
-    // Paso 7: Seleccionar opción
+    // Paso 7: Seleccionar opcion
     const optionChoice = await ask(
-      "¿Cuál opción quieres desarrollar? (número): "
+      "Cual opcion quieres desarrollar? (numero): "
     );
     const selectedIdx = parseInt(optionChoice, 10) - 1;
 
     if (selectedIdx < 0 || selectedIdx >= grid.length) {
-      console.log("Opción inválida.");
+      console.log("Opcion invalida.");
       rl.close();
       return;
     }
@@ -104,73 +117,89 @@ export async function run(profile: UserContentProfile) {
     const selectedOption = grid[selectedIdx];
 
     // Paso 8: Generar y evaluar borradores
-    console.log("\n⏳ Generando 3 borradores...");
+    console.log("\nGenerando 3 borradores...");
     const drafts = await generateDrafts(selectedOption, profile);
 
-    console.log("⏳ Evaluando calidad...");
-    const ranked_drafts = await rankDrafts(drafts);
+    console.log("Evaluando calidad...");
+    const rankedDrafts = await rankDrafts(drafts);
 
-    if (ranked_drafts.length > 0) {
-      const best = ranked_drafts[0];
+    if (rankedDrafts.length > 0) {
+      const best = rankedDrafts[0];
       console.log(
-        `\n💡 Recomendación: Borrador ${best.draft.variant} (score ${best.evaluation.totalScore}/50)`
+        `\nRecomendacion: Borrador ${best.draft.variant} (score ${best.evaluation.totalScore}/50)`
       );
     }
 
-    displayDrafts(ranked_drafts);
+    displayDrafts(rankedDrafts);
 
-    // Paso 9: Confirmar publicación
+    // Paso 9: Confirmar publicacion
     const draftChoice = await ask(
-      "¿Cuál borrador publicar? (número, o 'no' para cancelar): "
+      "Cual borrador publicar? (numero, o 'no' para cancelar): "
     );
 
     if (draftChoice.toLowerCase() === "no") {
-      console.log("Publicación cancelada.");
+      console.log("Publicacion cancelada.");
       rl.close();
       return;
     }
 
     const draftIdx = parseInt(draftChoice, 10) - 1;
-    if (draftIdx < 0 || draftIdx >= ranked_drafts.length) {
-      console.log("Opción inválida.");
+    if (draftIdx < 0 || draftIdx >= rankedDrafts.length) {
+      console.log("Opcion invalida.");
       rl.close();
       return;
     }
 
-    const chosenDraft = ranked_drafts[draftIdx].draft;
+    const chosenDraft = rankedDrafts[draftIdx].draft;
+
+    // Preguntar por media
+    let mediaAsset: MediaAsset | undefined;
+    const mediaChoice = await ask(
+      "Adjuntar media? (imagen/pdf/video/no): "
+    );
+
+    if (mediaChoice === "imagen") {
+      console.log("Generando imagen con Gemini...");
+      mediaAsset = await prepareImageAsset(selectedOption.headline);
+      mediaAsset = await uploadAsset(mediaAsset);
+      console.log(`Imagen lista: ${mediaAsset.remoteUrl}`);
+    } else if (mediaChoice === "pdf") {
+      const pdfTitle = selectedOption.headline;
+      const pdfPoints = chosenDraft.body.split("\n").filter(Boolean).slice(0, 5);
+      console.log("Generando PDF...");
+      mediaAsset = await preparePdfAsset(pdfTitle, pdfPoints);
+      mediaAsset = await uploadAsset(mediaAsset);
+      console.log(`PDF listo: ${mediaAsset.remoteUrl}`);
+    } else if (mediaChoice === "video") {
+      console.log("Para video, usa: npx remotion render NewsVideo out/news-video.mp4");
+      console.log("Luego sube con: ts-node src/upload/upload-video.ts out/news-video.mp4");
+    }
 
     const confirm = await ask(
-      `\n¿Confirmas publicar este borrador en LinkedIn? (si/no): `
+      `\nConfirmas publicar este borrador en LinkedIn? (si/no): `
     );
 
     if (confirm.toLowerCase() !== "si") {
-      console.log("Publicación cancelada.");
+      console.log("Publicacion cancelada.");
       rl.close();
       return;
     }
 
     // Paso 10: Publicar
-    console.log("\n⏳ Publicando en LinkedIn...");
+    console.log("\nPublicando en LinkedIn...");
     const result = await publish(chosenDraft);
 
     if (result.success) {
-      console.log(`✅ Publicado exitosamente. Post ID: ${result.postId}`);
+      console.log(`Publicado exitosamente. Post ID: ${result.postId}`);
 
-      // Guardar en historial
-      savePublishedPost({
+      await savePublishedPost({
         draftId: chosenDraft.draftId,
-        optionId: chosenDraft.optionId,
-        newsId: selectedOption.newsId,
-        sector: profile.sectors[0],
-        hookType: chosenDraft.variant.toString(),
-        tone: profile.preferredTone,
-        format: selectedOption.format,
-        fullText: chosenDraft.fullText,
         linkedinPostId: result.postId,
-        publishedAt: new Date().toISOString(),
+        mediaType: mediaAsset?.type,
+        mediaUrl: mediaAsset?.remoteUrl,
       });
     } else {
-      console.log(`❌ Error al publicar: ${result.error}`);
+      console.log(`Error al publicar: ${result.error}`);
     }
 
     rl.close();
@@ -181,13 +210,13 @@ export async function run(profile: UserContentProfile) {
   }
 }
 
-// Ejecución directa
+// Ejecucion directa
 if (require.main === module) {
   const defaultProfile: UserContentProfile = {
     sectors: [process.env.DEFAULT_SECTOR || "technology"],
     keywords: ["AI", "startups", "innovation"],
     preferredTone: "analytical",
-    targetAudience: "Profesionales de tecnología y negocios",
+    targetAudience: "Profesionales de tecnologia y negocios",
     publishingGoal: "authority",
     preferredFormats: ["text"],
   };

@@ -1,105 +1,211 @@
-import { v4 as uuid } from "uuid";
-import { getDb } from "./db";
-import { PublishedPostRecord } from "../types";
+import { supabase } from "../lib/supabase";
+import { logger } from "../services/logger";
 
-export function savePublishedPost(record: Omit<PublishedPostRecord, "id">): string {
-  const db = getDb();
-  const id = uuid();
+export async function saveNewsItem(item: {
+  source: string;
+  title: string;
+  url: string;
+  summary?: string;
+  publishedAt?: string;
+  canonicalText?: string;
+}) {
+  const { data, error } = await supabase
+    .from("news_items")
+    .upsert(
+      {
+        source: item.source,
+        title: item.title,
+        url: item.url,
+        summary: item.summary || null,
+        published_at: item.publishedAt || null,
+        canonical_text: item.canonicalText || null,
+        status: "new",
+      },
+      { onConflict: "url" }
+    )
+    .select()
+    .single();
 
-  db.prepare(`
-    INSERT INTO published_posts (id, draft_id, option_id, news_id, sector, hook_type, tone, format, full_text, linkedin_post_id, published_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    id,
-    record.draftId,
-    record.optionId,
-    record.newsId,
-    record.sector,
-    record.hookType,
-    record.tone,
-    record.format,
-    record.fullText,
-    record.linkedinPostId || null,
-    record.publishedAt
-  );
-
-  return id;
+  if (error) {
+    logger.warn({ error: error.message, url: item.url }, "Failed to save news item");
+    return null;
+  }
+  return data;
 }
 
-export function savePostMetrics(
-  postId: string,
+export async function saveContentOption(option: {
+  newsItemId: string;
+  angleTitle: string;
+  thesis: string;
+  format: string;
+  score?: number;
+}) {
+  const { data, error } = await supabase
+    .from("content_options")
+    .insert({
+      news_item_id: option.newsItemId,
+      angle_title: option.angleTitle,
+      thesis: option.thesis,
+      format: option.format,
+      score: option.score || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function saveDraft(draft: {
+  contentOptionId: string;
+  variant: number;
+  fullText: string;
+  score?: number;
+}) {
+  const { data, error } = await supabase
+    .from("drafts")
+    .insert({
+      content_option_id: draft.contentOptionId,
+      variant: draft.variant,
+      full_text: draft.fullText,
+      score: draft.score || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function markDraftSelected(draftId: string) {
+  const { error } = await supabase
+    .from("drafts")
+    .update({ selected: true })
+    .eq("id", draftId);
+
+  if (error) throw error;
+}
+
+export async function savePublishedPost(record: {
+  draftId: string;
+  linkedinPostId?: string;
+  mediaType?: string;
+  mediaUrl?: string;
+}): Promise<string> {
+  const { data, error } = await supabase
+    .from("published_posts")
+    .insert({
+      draft_id: record.draftId,
+      linkedin_post_id: record.linkedinPostId || null,
+      media_type: record.mediaType || null,
+      media_url: record.mediaUrl || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data.id;
+}
+
+export async function savePostMetrics(
+  publishedPostId: string,
   metrics: { impressions: number; likes: number; comments: number; reposts: number }
 ) {
-  const db = getDb();
-  db.prepare(`
-    INSERT INTO post_metrics (post_id, measured_at, impressions, likes, comments, reposts)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(postId, new Date().toISOString(), metrics.impressions, metrics.likes, metrics.comments, metrics.reposts);
+  const { error } = await supabase.from("post_metrics").insert({
+    published_post_id: publishedPostId,
+    impressions: metrics.impressions,
+    likes: metrics.likes,
+    comments: metrics.comments,
+    reposts: metrics.reposts,
+  });
 
-  db.prepare(`
-    UPDATE published_posts SET impressions = ?, likes = ?, comments = ?, reposts = ? WHERE id = ?
-  `).run(metrics.impressions, metrics.likes, metrics.comments, metrics.reposts, postId);
+  if (error) throw error;
 }
 
-export function getHistoricalPerformance(sector?: string): PublishedPostRecord[] {
-  const db = getDb();
-  const query = sector
-    ? `SELECT * FROM published_posts WHERE sector = ? ORDER BY published_at DESC LIMIT 50`
-    : `SELECT * FROM published_posts ORDER BY published_at DESC LIMIT 50`;
+export async function saveMemoryChunk(chunk: {
+  kind: string;
+  refId?: string;
+  content: string;
+  embedding?: number[];
+  metadata?: Record<string, unknown>;
+}) {
+  const { error } = await supabase.from("memory_chunks").insert({
+    kind: chunk.kind,
+    ref_id: chunk.refId || null,
+    content: chunk.content,
+    embedding: chunk.embedding || null,
+    metadata: chunk.metadata || {},
+  });
 
-  const rows = sector ? db.prepare(query).all(sector) : db.prepare(query).all();
-
-  return rows.map((row: any) => ({
-    id: row.id,
-    draftId: row.draft_id,
-    optionId: row.option_id,
-    newsId: row.news_id,
-    sector: row.sector,
-    hookType: row.hook_type,
-    tone: row.tone,
-    format: row.format,
-    fullText: row.full_text,
-    linkedinPostId: row.linkedin_post_id,
-    publishedAt: row.published_at,
-    impressions: row.impressions,
-    likes: row.likes,
-    comments: row.comments,
-    reposts: row.reposts,
-  }));
+  if (error) throw error;
 }
 
-export function getTopPatterns(): {
-  bestHookTypes: string[];
-  bestFormats: string[];
-  avgEngagement: number;
-} {
-  const db = getDb();
+export async function searchMemory(
+  embedding: number[],
+  limit: number = 5
+): Promise<{ id: string; content: string; kind: string; metadata: Record<string, unknown> }[]> {
+  const { data, error } = await supabase.rpc("match_memory_chunks", {
+    query_embedding: embedding,
+    match_count: limit,
+  });
 
-  const hookRows = db.prepare(`
-    SELECT hook_type, AVG(likes + comments + reposts) as engagement
-    FROM published_posts
-    WHERE hook_type IS NOT NULL
-    GROUP BY hook_type
-    ORDER BY engagement DESC
-    LIMIT 5
-  `).all() as { hook_type: string; engagement: number }[];
+  if (error) {
+    logger.warn({ error: error.message }, "Memory search failed, falling back to empty");
+    return [];
+  }
+  return data || [];
+}
 
-  const formatRows = db.prepare(`
-    SELECT format, AVG(likes + comments + reposts) as engagement
-    FROM published_posts
-    WHERE format IS NOT NULL
-    GROUP BY format
-    ORDER BY engagement DESC
-    LIMIT 3
-  `).all() as { format: string; engagement: number }[];
+export async function getHistoricalPerformance(limit: number = 50) {
+  const { data, error } = await supabase
+    .from("published_posts")
+    .select(`
+      *,
+      draft:drafts(*),
+      metrics:post_metrics(*)
+    `)
+    .order("published_at", { ascending: false })
+    .limit(limit);
 
-  const avgRow = db.prepare(`
-    SELECT AVG(likes + comments + reposts) as avg_engagement FROM published_posts
-  `).get() as { avg_engagement: number } | undefined;
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getTopPatterns() {
+  const posts = await getHistoricalPerformance(100);
+
+  const byFormat: Record<string, number[]> = {};
+  for (const post of posts) {
+    const format = post.media_type || "text";
+    const engagement = (post.metrics || []).reduce(
+      (sum: number, m: { likes: number; comments: number; reposts: number }) =>
+        sum + (m.likes || 0) + (m.comments || 0) + (m.reposts || 0),
+      0
+    );
+    if (!byFormat[format]) byFormat[format] = [];
+    byFormat[format].push(engagement);
+  }
+
+  const bestFormats = Object.entries(byFormat)
+    .map(([format, values]) => ({
+      format,
+      avg: values.reduce((a, b) => a + b, 0) / values.length,
+    }))
+    .sort((a, b) => b.avg - a.avg)
+    .map((r) => r.format);
+
+  const totalEngagement = posts.reduce((sum, post) => {
+    const eng = (post.metrics || []).reduce(
+      (s: number, m: { likes: number; comments: number; reposts: number }) =>
+        s + (m.likes || 0) + (m.comments || 0) + (m.reposts || 0),
+      0
+    );
+    return sum + eng;
+  }, 0);
 
   return {
-    bestHookTypes: hookRows.map((r) => r.hook_type),
-    bestFormats: formatRows.map((r) => r.format),
-    avgEngagement: avgRow?.avg_engagement || 0,
+    bestFormats,
+    avgEngagement: posts.length ? totalEngagement / posts.length : 0,
+    totalPosts: posts.length,
   };
 }
