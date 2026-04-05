@@ -4,15 +4,27 @@ import { z } from "zod";
 config();
 
 const envSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().default(""),
+  // LLM providers (at least one required)
+  GROQ_API_KEY: z.string().default(""),
+  CEREBRAS_API_KEY: z.string().default(""),
+
+  // LinkedIn OAuth 2.0
   LINKEDIN_ACCESS_TOKEN: z.string().default(""),
   LINKEDIN_PERSON_URN: z.string().default(""),
+
+  // Supabase
   SUPABASE_URL: z.string().default(""),
   SUPABASE_ANON_KEY: z.string().default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
+
+  // Google Cloud / Vertex AI (image generation)
   GCP_PROJECT: z.string().default(""),
   GCP_LOCATION: z.string().default("us-central1"),
+
+  // RSS Feeds (comma-separated)
   RSS_FEEDS: z.string().default(""),
+
+  // Agent config
   DEFAULT_SECTOR: z.string().default("technology"),
   DEFAULT_LANGUAGE: z.string().default("es"),
   LOG_LEVEL: z.string().default("info"),

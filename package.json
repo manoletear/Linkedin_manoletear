@@ -1,23 +1,24 @@
 {
   "name": "linkedin-agent",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Agente de curaduría y publicación editorial para LinkedIn",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
+    "test:pipeline": "ts-node src/test-pipeline.ts",
     "generate:image": "ts-node src/generate-image.ts",
     "generate:pdf": "ts-node src/create-pdf.ts",
     "db:push": "supabase db push"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
     "@google-cloud/vertexai": "^1.9.2",
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
+    "groq-sdk": "^0.15.0",
     "pdfkit": "^0.16.0",
     "playwright": "^1.49.1",
     "pino": "^9.6.0",
