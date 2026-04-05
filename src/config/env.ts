@@ -17,9 +17,8 @@ const envSchema = z.object({
   SUPABASE_ANON_KEY: z.string().default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().default(""),
 
-  // Google Cloud / Vertex AI (image generation)
-  GCP_PROJECT: z.string().default(""),
-  GCP_LOCATION: z.string().default("us-central1"),
+  // Gemini (Google AI Studio - free)
+  GEMINI_API_KEY: z.string().default(""),
 
   // RSS Feeds (comma-separated)
   RSS_FEEDS: z.string().default(""),

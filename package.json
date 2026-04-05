@@ -1,6 +1,6 @@
 {
   "name": "linkedin-agent",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Agente de curaduría y publicación editorial para LinkedIn",
   "main": "dist/main.js",
   "scripts": {
@@ -15,12 +15,12 @@
     "db:push": "supabase db push"
   },
   "dependencies": {
-    "@google-cloud/vertexai": "^1.9.2",
+    "@google/genai": "^1.1.0",
     "@supabase/supabase-js": "^2.49.1",
     "axios": "^1.7.9",
+    "better-sqlite3": "^11.7.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
-    "better-sqlite3": "^11.7.0",
     "groq-sdk": "^0.15.0",
     "pdfkit": "^0.16.0",
     "playwright": "^1.49.1",

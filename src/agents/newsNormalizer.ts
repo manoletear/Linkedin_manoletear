@@ -1,6 +1,8 @@
 import { v4 as uuid } from "uuid";
 import { RawNewsItem, NormalizedNewsItem } from "../types";
 import { llmCompleteJSON } from "../services/llmService";
+import { analyzeArticle } from "../services/geminiService";
+import { env } from "../config/env";
 
 export function normalizeBasic(raw: RawNewsItem): NormalizedNewsItem {
   return {
@@ -17,16 +19,37 @@ export function normalizeBasic(raw: RawNewsItem): NormalizedNewsItem {
   };
 }
 
-export async function enrichWithLLM(
+/**
+ * Enrich with Gemini (multimodal, deeper analysis) if available,
+ * otherwise fallback to Groq (text-only extraction).
+ */
+async function enrichItem(
   item: NormalizedNewsItem
 ): Promise<NormalizedNewsItem> {
+  // Try Gemini first (better at multimodal analysis)
+  if (env.GEMINI_API_KEY) {
+    try {
+      const analysis = await analyzeArticle(item.canonicalText);
+      return {
+        ...item,
+        entities: analysis.entities.length > 0 ? analysis.entities : item.entities,
+        themes: analysis.themes.length > 0 ? analysis.themes : item.themes,
+        // Store editorial angle in summary if better
+        summary: analysis.editorialAngle || item.summary,
+      };
+    } catch {
+      // Fallback to Groq
+    }
+  }
+
+  // Fallback: Groq/Cerebras text extraction
   const result = await llmCompleteJSON<{
     entities: string[];
     themes: string[];
   }>(
     "Eres un extractor de entidades y temas. Responde solo JSON.",
-    `Extrae entidades (empresas, personas, tecnologías) y temas principales de esta noticia:
-Título: ${item.title}
+    `Extrae entidades (empresas, personas, tecnologias) y temas principales:
+Titulo: ${item.title}
 Resumen: ${item.summary}
 
 Formato: { "entities": [...], "themes": [...] }`
@@ -47,7 +70,7 @@ export async function normalizeBatch(
   // Enrich top 20 items to save API calls
   const toEnrich = basic.slice(0, 20);
   const enriched = await Promise.allSettled(
-    toEnrich.map((item) => enrichWithLLM(item))
+    toEnrich.map((item) => enrichItem(item))
   );
 
   return enriched.map((result, i) =>
