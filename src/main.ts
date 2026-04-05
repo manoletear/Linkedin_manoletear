@@ -8,7 +8,7 @@ import { buildGrid } from "./agents/gridGenerator";
 import { generateDrafts } from "./agents/copywriter";
 import { rankDrafts } from "./agents/editorialCritic";
 import { publish } from "./agents/linkedinPublisher";
-import { prepareImageAsset, preparePdfAsset, uploadAsset, MediaAsset } from "./agents/mediaHandler";
+import { prepareImageAsset, preparePdfAsset, MediaAsset } from "./agents/mediaHandler";
 import { savePublishedPost, saveNewsItem } from "./storage/performanceStore";
 import { logger } from "./services/logger";
 import * as readline from "readline";
@@ -58,11 +58,11 @@ function displayDrafts(
 export async function run(profile: UserContentProfile) {
   try {
     // Paso 1-2: Recolectar noticias
-    console.log("\n Recolectando noticias...");
+    console.log("\nRecolectando noticias...");
     const rawNews = await NewsCollector.collect(profile);
 
     if (rawNews.length === 0) {
-      console.log("No se encontraron noticias. Verifica tus fuentes RSS y API keys.");
+      console.log("No se encontraron noticias. Verifica tus fuentes RSS o conexion a internet.");
       return;
     }
 
@@ -72,9 +72,9 @@ export async function run(profile: UserContentProfile) {
     const deduped = deduplicate(normalized);
     console.log(`  ${rawNews.length} -> ${normalized.length} -> ${deduped.length} noticias unicas`);
 
-    // Persistir noticias en Supabase
+    // Persistir noticias en SQLite
     for (const item of deduped.slice(0, 20)) {
-      await saveNewsItem({
+      saveNewsItem({
         source: item.source,
         title: item.title,
         url: item.url,
@@ -89,13 +89,15 @@ export async function run(profile: UserContentProfile) {
     const ranked = rank(deduped, profile);
 
     // Paso 5: Filtrar senal baja
-    console.log("Evaluando valor editorial...");
+    console.log("Evaluando valor editorial con LLM...");
     const publishable = await filterLowSignal(ranked, profile);
 
     if (publishable.length === 0) {
       console.log("Ninguna noticia alcanzo el umbral editorial. Intenta con otro sector o fuentes.");
       return;
     }
+
+    console.log(`  ${publishable.length} noticias con valor editorial\n`);
 
     // Paso 6: Generar grilla
     console.log("Generando grilla editorial...");
@@ -155,24 +157,19 @@ export async function run(profile: UserContentProfile) {
     // Preguntar por media
     let mediaAsset: MediaAsset | undefined;
     const mediaChoice = await ask(
-      "Adjuntar media? (imagen/pdf/video/no): "
+      "Adjuntar media? (imagen/pdf/no): "
     );
 
     if (mediaChoice === "imagen") {
       console.log("Generando imagen con Gemini...");
       mediaAsset = await prepareImageAsset(selectedOption.headline);
-      mediaAsset = await uploadAsset(mediaAsset);
-      console.log(`Imagen lista: ${mediaAsset.remoteUrl}`);
+      console.log(`Imagen lista: ${mediaAsset.localPath}`);
     } else if (mediaChoice === "pdf") {
       const pdfTitle = selectedOption.headline;
       const pdfPoints = chosenDraft.body.split("\n").filter(Boolean).slice(0, 5);
       console.log("Generando PDF...");
       mediaAsset = await preparePdfAsset(pdfTitle, pdfPoints);
-      mediaAsset = await uploadAsset(mediaAsset);
-      console.log(`PDF listo: ${mediaAsset.remoteUrl}`);
-    } else if (mediaChoice === "video") {
-      console.log("Para video, usa: npx remotion render NewsVideo out/news-video.mp4");
-      console.log("Luego sube con: ts-node src/upload/upload-video.ts out/news-video.mp4");
+      console.log(`PDF listo: ${mediaAsset.localPath}`);
     }
 
     const confirm = await ask(
@@ -192,11 +189,11 @@ export async function run(profile: UserContentProfile) {
     if (result.success) {
       console.log(`Publicado exitosamente. Post ID: ${result.postId}`);
 
-      await savePublishedPost({
+      savePublishedPost({
         draftId: chosenDraft.draftId,
         linkedinPostId: result.postId,
         mediaType: mediaAsset?.type,
-        mediaUrl: mediaAsset?.remoteUrl,
+        mediaUrl: mediaAsset?.localPath,
       });
     } else {
       console.log(`Error al publicar: ${result.error}`);
@@ -216,7 +213,7 @@ if (require.main === module) {
     sectors: [process.env.DEFAULT_SECTOR || "technology"],
     keywords: ["AI", "startups", "innovation"],
     preferredTone: "analytical",
-    targetAudience: "Profesionales de tecnologia y negocios",
+    targetAudience: "Profesionales de tecnologia y negocios en LATAM",
     publishingGoal: "authority",
     preferredFormats: ["text"],
   };

@@ -219,32 +219,7 @@ function parseDateSafe(dateStr: string): string {
  * Load targets from Supabase if configured, otherwise use hardcoded defaults.
  */
 export async function loadTargets(): Promise<ScrapingTarget[]> {
-  try {
-    const { env } = await import("../config/env");
-    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-      return DEFAULT_TARGETS;
-    }
-
-    const { supabase } = await import("../lib/supabase");
-    const { data, error } = await supabase
-      .from("scraping_targets")
-      .select("*")
-      .eq("active", true);
-
-    if (error || !data?.length) {
-      logger.info("Using hardcoded scraping targets (Supabase not available or empty)");
-      return DEFAULT_TARGETS;
-    }
-
-    logger.info(`Loaded ${data.length} scraping targets from Supabase`);
-    return data.map((row: any) => ({
-      name: row.name,
-      url: row.url,
-      selectors: row.selectors,
-    }));
-  } catch {
-    return DEFAULT_TARGETS;
-  }
+  return DEFAULT_TARGETS;
 }
 
 export async function scrapeTargets(

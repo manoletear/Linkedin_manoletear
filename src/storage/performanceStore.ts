@@ -1,7 +1,8 @@
-import { supabase } from "../lib/supabase";
+import { v4 as uuid } from "uuid";
+import { getDb } from "./db";
 import { logger } from "../services/logger";
 
-export async function saveNewsItem(item: {
+export function saveNewsItem(item: {
   source: string;
   title: string;
   url: string;
@@ -9,203 +10,133 @@ export async function saveNewsItem(item: {
   publishedAt?: string;
   canonicalText?: string;
 }) {
-  const { data, error } = await supabase
-    .from("news_items")
-    .upsert(
-      {
-        source: item.source,
-        title: item.title,
-        url: item.url,
-        summary: item.summary || null,
-        published_at: item.publishedAt || null,
-        canonical_text: item.canonicalText || null,
-        status: "new",
-      },
-      { onConflict: "url" }
-    )
-    .select()
-    .single();
-
-  if (error) {
-    logger.warn({ error: error.message, url: item.url }, "Failed to save news item");
-    return null;
+  const db = getDb();
+  try {
+    db.prepare(`
+      INSERT OR IGNORE INTO news_items (id, source, title, url, summary, published_at, canonical_text, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'new')
+    `).run(uuid(), item.source, item.title, item.url, item.summary || null, item.publishedAt || null, item.canonicalText || null);
+  } catch (error) {
+    logger.warn({ error: (error as Error).message, url: item.url }, "Failed to save news item");
   }
-  return data;
 }
 
-export async function saveContentOption(option: {
+export function saveContentOption(option: {
   newsItemId: string;
   angleTitle: string;
   thesis: string;
   format: string;
   score?: number;
-}) {
-  const { data, error } = await supabase
-    .from("content_options")
-    .insert({
-      news_item_id: option.newsItemId,
-      angle_title: option.angleTitle,
-      thesis: option.thesis,
-      format: option.format,
-      score: option.score || null,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+}): string {
+  const db = getDb();
+  const id = uuid();
+  db.prepare(`
+    INSERT INTO content_options (id, news_item_id, angle_title, thesis, format, score)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, option.newsItemId, option.angleTitle, option.thesis, option.format, option.score || null);
+  return id;
 }
 
-export async function saveDraft(draft: {
+export function saveDraft(draft: {
   contentOptionId: string;
   variant: number;
   fullText: string;
   score?: number;
-}) {
-  const { data, error } = await supabase
-    .from("drafts")
-    .insert({
-      content_option_id: draft.contentOptionId,
-      variant: draft.variant,
-      full_text: draft.fullText,
-      score: draft.score || null,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+}): string {
+  const db = getDb();
+  const id = uuid();
+  db.prepare(`
+    INSERT INTO drafts (id, content_option_id, variant, full_text, score)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, draft.contentOptionId, draft.variant, draft.fullText, draft.score || null);
+  return id;
 }
 
-export async function markDraftSelected(draftId: string) {
-  const { error } = await supabase
-    .from("drafts")
-    .update({ selected: true })
-    .eq("id", draftId);
-
-  if (error) throw error;
+export function markDraftSelected(draftId: string) {
+  const db = getDb();
+  db.prepare(`UPDATE drafts SET selected = 1 WHERE id = ?`).run(draftId);
 }
 
-export async function savePublishedPost(record: {
+export function savePublishedPost(record: {
   draftId: string;
   linkedinPostId?: string;
   mediaType?: string;
   mediaUrl?: string;
-}): Promise<string> {
-  const { data, error } = await supabase
-    .from("published_posts")
-    .insert({
-      draft_id: record.draftId,
-      linkedin_post_id: record.linkedinPostId || null,
-      media_type: record.mediaType || null,
-      media_url: record.mediaUrl || null,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data.id;
+}): string {
+  const db = getDb();
+  const id = uuid();
+  db.prepare(`
+    INSERT INTO published_posts (id, draft_id, linkedin_post_id, media_type, media_url)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, record.draftId, record.linkedinPostId || null, record.mediaType || null, record.mediaUrl || null);
+  return id;
 }
 
-export async function savePostMetrics(
+export function savePostMetrics(
   publishedPostId: string,
   metrics: { impressions: number; likes: number; comments: number; reposts: number }
 ) {
-  const { error } = await supabase.from("post_metrics").insert({
-    published_post_id: publishedPostId,
-    impressions: metrics.impressions,
-    likes: metrics.likes,
-    comments: metrics.comments,
-    reposts: metrics.reposts,
-  });
-
-  if (error) throw error;
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO post_metrics (published_post_id, impressions, likes, comments, reposts)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(publishedPostId, metrics.impressions, metrics.likes, metrics.comments, metrics.reposts);
 }
 
-export async function saveMemoryChunk(chunk: {
+export function saveMemoryChunk(chunk: {
   kind: string;
   refId?: string;
   content: string;
-  embedding?: number[];
   metadata?: Record<string, unknown>;
 }) {
-  const { error } = await supabase.from("memory_chunks").insert({
-    kind: chunk.kind,
-    ref_id: chunk.refId || null,
-    content: chunk.content,
-    embedding: chunk.embedding || null,
-    metadata: chunk.metadata || {},
-  });
-
-  if (error) throw error;
+  const db = getDb();
+  db.prepare(`
+    INSERT INTO memory_chunks (id, kind, ref_id, content, metadata)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(uuid(), chunk.kind, chunk.refId || null, chunk.content, JSON.stringify(chunk.metadata || {}));
 }
 
-export async function searchMemory(
-  embedding: number[],
-  limit: number = 5
-): Promise<{ id: string; content: string; kind: string; metadata: Record<string, unknown> }[]> {
-  const { data, error } = await supabase.rpc("match_memory_chunks", {
-    query_embedding: embedding,
-    match_count: limit,
-  });
+export function getHistoricalPerformance(limit: number = 50) {
+  const db = getDb();
+  const posts = db.prepare(`
+    SELECT pp.*, d.full_text as draft_text, d.variant,
+           pm.impressions, pm.likes, pm.comments, pm.reposts
+    FROM published_posts pp
+    LEFT JOIN drafts d ON d.id = pp.draft_id
+    LEFT JOIN post_metrics pm ON pm.published_post_id = pp.id
+    ORDER BY pp.published_at DESC
+    LIMIT ?
+  `).all(limit) as any[];
 
-  if (error) {
-    logger.warn({ error: error.message }, "Memory search failed, falling back to empty");
-    return [];
-  }
-  return data || [];
+  return posts;
 }
 
-export async function getHistoricalPerformance(limit: number = 50) {
-  const { data, error } = await supabase
-    .from("published_posts")
-    .select(`
-      *,
-      draft:drafts(*),
-      metrics:post_metrics(*)
-    `)
-    .order("published_at", { ascending: false })
-    .limit(limit);
+export function getTopPatterns(): {
+  bestFormats: string[];
+  avgEngagement: number;
+  totalPosts: number;
+} {
+  const db = getDb();
 
-  if (error) throw error;
-  return data || [];
-}
+  const formatRows = db.prepare(`
+    SELECT pp.media_type as format,
+           AVG(COALESCE(pm.likes, 0) + COALESCE(pm.comments, 0) + COALESCE(pm.reposts, 0)) as avg_engagement
+    FROM published_posts pp
+    LEFT JOIN post_metrics pm ON pm.published_post_id = pp.id
+    GROUP BY pp.media_type
+    ORDER BY avg_engagement DESC
+  `).all() as { format: string | null; avg_engagement: number }[];
 
-export async function getTopPatterns() {
-  const posts = await getHistoricalPerformance(100);
-
-  const byFormat: Record<string, number[]> = {};
-  for (const post of posts) {
-    const format = post.media_type || "text";
-    const engagement = (post.metrics || []).reduce(
-      (sum: number, m: { likes: number; comments: number; reposts: number }) =>
-        sum + (m.likes || 0) + (m.comments || 0) + (m.reposts || 0),
-      0
-    );
-    if (!byFormat[format]) byFormat[format] = [];
-    byFormat[format].push(engagement);
-  }
-
-  const bestFormats = Object.entries(byFormat)
-    .map(([format, values]) => ({
-      format,
-      avg: values.reduce((a, b) => a + b, 0) / values.length,
-    }))
-    .sort((a, b) => b.avg - a.avg)
-    .map((r) => r.format);
-
-  const totalEngagement = posts.reduce((sum, post) => {
-    const eng = (post.metrics || []).reduce(
-      (s: number, m: { likes: number; comments: number; reposts: number }) =>
-        s + (m.likes || 0) + (m.comments || 0) + (m.reposts || 0),
-      0
-    );
-    return sum + eng;
-  }, 0);
+  const totalRow = db.prepare(`
+    SELECT COUNT(*) as total,
+           AVG(COALESCE(pm.likes, 0) + COALESCE(pm.comments, 0) + COALESCE(pm.reposts, 0)) as avg_eng
+    FROM published_posts pp
+    LEFT JOIN post_metrics pm ON pm.published_post_id = pp.id
+  `).get() as { total: number; avg_eng: number } | undefined;
 
   return {
-    bestFormats,
-    avgEngagement: posts.length ? totalEngagement / posts.length : 0,
-    totalPosts: posts.length,
+    bestFormats: formatRows.map((r) => r.format || "text"),
+    avgEngagement: totalRow?.avg_eng || 0,
+    totalPosts: totalRow?.total || 0,
   };
 }

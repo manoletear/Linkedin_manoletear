@@ -16,21 +16,21 @@ export type LearningInsight = {
  */
 export async function analyzePastPerformance(): Promise<LearningInsight | null> {
   try {
-    const history = await getHistoricalPerformance(30);
+    const history = getHistoricalPerformance(30);
 
     if (history.length < 3) {
       logger.info("Not enough history for learning (need 3+ posts)");
       return null;
     }
 
-    const patterns = await getTopPatterns();
+    const patterns = getTopPatterns();
 
     const postsForAnalysis = history.slice(0, 15).map((post: any) => ({
-      text: post.draft?.full_text?.slice(0, 200) || "",
+      text: (post.draft_text || "").slice(0, 200),
       format: post.media_type || "text",
-      likes: post.metrics?.[0]?.likes || 0,
-      comments: post.metrics?.[0]?.comments || 0,
-      reposts: post.metrics?.[0]?.reposts || 0,
+      likes: post.likes || 0,
+      comments: post.comments || 0,
+      reposts: post.reposts || 0,
     }));
 
     const insight = await llmCompleteJSON<LearningInsight>(
@@ -55,7 +55,7 @@ Responde con JSON:
     );
 
     // Guardar insight como memory chunk
-    await saveMemoryChunk({
+    saveMemoryChunk({
       kind: "learning_insight",
       content: JSON.stringify(insight),
       metadata: {
