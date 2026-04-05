@@ -4,7 +4,7 @@ import { z } from "zod";
 config();
 
 const envSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().min(1),
+  ANTHROPIC_API_KEY: z.string().default(""),
   LINKEDIN_ACCESS_TOKEN: z.string().default(""),
   LINKEDIN_PERSON_URN: z.string().default(""),
   SUPABASE_URL: z.string().default(""),
