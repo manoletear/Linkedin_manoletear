@@ -16,6 +16,8 @@ import {
   getHistoricalPerformance,
   getTopPatterns,
 } from "./storage/performanceStore";
+import { getProviderStatus } from "./services/llmService";
+import { env } from "./config/env";
 import { logger } from "./services/logger";
 import * as readline from "readline";
 
@@ -36,6 +38,19 @@ async function mainMenu() {
   console.log("\n══════════════════════════════════════════");
   console.log("  LINKEDIN EDITORIAL AGENT");
   console.log("══════════════════════════════════════════\n");
+
+  // Show LLM provider status
+  const providers = await getProviderStatus();
+  console.log("  Proveedores LLM:");
+  for (const p of providers) {
+    const icon = p.available ? "+" : "-";
+    console.log(`    [${icon}] ${p.provider}`);
+  }
+  if (env.GEMINI_API_KEY) {
+    console.log(`    [+] gemini (multimodal)`);
+  }
+  console.log();
+
   console.log("  1. Correr pipeline editorial");
   console.log("  2. Ver historial de publicaciones");
   console.log("  3. Ver patrones de rendimiento");

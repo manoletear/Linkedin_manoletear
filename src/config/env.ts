@@ -20,6 +20,10 @@ const envSchema = z.object({
   // Gemini (Google AI Studio - free)
   GEMINI_API_KEY: z.string().default(""),
 
+  // Ollama / Gemma 4 (local fallback)
+  OLLAMA_URL: z.string().default("http://localhost:11434"),
+  OLLAMA_MODEL: z.string().default("gemma4:27b"),
+
   // RSS Feeds (comma-separated)
   RSS_FEEDS: z.string().default(""),
 
